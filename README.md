@@ -427,7 +427,3 @@ Tous droits réservés
 **Plateforme:** ESP32 + FreeRTOS + PlatformIO  
 
 **Dernière mise à jour:** 2026-05-25  
-**Généré par:** Copilot CLI v1.0.39
-
-# Discovery_Master_Board
-# Discovery_Master_Board
