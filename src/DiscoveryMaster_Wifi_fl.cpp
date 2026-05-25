@@ -33,7 +33,6 @@ Il fournit une interface simple pour démarrer le WiFi du maître Discovery.
 */
 
 #include "DiscoveryMaster_Wifi_fl.h"
-#include "DiscoveryMaster_Settings.h"
 
 void DiscoveryMaster_Fl_Wifi::start()
 {

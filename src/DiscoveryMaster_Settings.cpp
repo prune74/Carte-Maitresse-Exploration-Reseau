@@ -2,7 +2,7 @@
 DiscoveryMaster_Settings.cpp / .h
 
 🎯 Rôle
-Gestion centralisée des paramètres persistants du module SAMain.
+Gestion centralisée des paramètres persistants du module DiscoveryMaster.
 Ce module lit et écrit le fichier JSON de configuration (settings.json) stocké
 dans SPIFFS, et fournit des variables statiques accessibles à tout le système.
 
@@ -10,6 +10,7 @@ dans SPIFFS, et fournit des variables statiques accessibles à tout le système.
 - begin() :
     • Monte le système de fichiers SPIFFS
     • Affiche un message d'erreur si le montage échoue
+
 - readFile() :
     • Ouvre settings.json en lecture
     • Charge les paramètres dans un document JSON
@@ -17,9 +18,10 @@ dans SPIFFS, et fournit des variables statiques accessibles à tout le système.
         - idNode        → dernier ID attribué à un satellite
         - discovery_on  → activation du réseau Discovery
         - wifi_on       → activation du WiFi
-        - wifi_ssid     → SSID pour WiFi STA mode
-        - wifi_psw      → Mot de passe WiFi STA mode
+        - wifi_ssid     → SSID pour le mode WiFi STA
+        - wifi_psw      → Mot de passe WiFi STA
     • Utilise des valeurs par défaut si le fichier est absent ou invalide
+
 - writeFile() :
     • Construit un document JSON avec les paramètres actuels
     • Écrit settings.json dans SPIFFS
@@ -27,7 +29,7 @@ dans SPIFFS, et fournit des variables statiques accessibles à tout le système.
 
 📌 Particularités
 - Les variables sont statiques, donc accessibles sans instance
-- WiFi credentials maintenant stockés sécurisés dans settings.json (pas en dur)
+- Les identifiants WiFi sont désormais stockés dans settings.json (pas en dur)
 - Permet de changer SSID/PSW sans recompiler le firmware
 
 🔗 Dépendances
