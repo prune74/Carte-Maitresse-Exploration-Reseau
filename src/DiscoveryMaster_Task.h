@@ -1,11 +1,12 @@
 #pragma once
-#include "DiscoveryMaster_Config.h"
+#include <Arduino.h>
+#include "DiscoveryMaster_SatManager.h"
+#include "DiscoveryMaster_CanService.h"
+#include "DiscoveryMaster_WebHandler.h"
 
 class DiscoveryMaster_Task
 {
-private:
 public:
-  DiscoveryMaster_Task() = delete;
-  static void begin();
-  static void task1(void *);
+    static void begin();
+    static void taskLoop(void *pvParameters);
 };

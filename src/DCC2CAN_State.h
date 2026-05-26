@@ -9,8 +9,7 @@ enum BoosterSupervisionState : uint8_t
 {
     BSTATE_RUNNING = 0,
     BSTATE_DCC_LOST = 1,
-    BSTATE_OVERCURRENT = 2,
-    BSTATE_RECOVERY = 3
+    BSTATE_RECOVERY = 2
 };
 
 struct BoosterRuntimeState
@@ -20,8 +19,6 @@ struct BoosterRuntimeState
     uint32_t lastEventTime;
 };
 
-extern volatile bool canMonitorEnabled;
-extern volatile int32_t canMonitorFilter;
 extern volatile BoosterRuntimeState g_state;
 extern SemaphoreHandle_t gStateUpdateMutex;
 

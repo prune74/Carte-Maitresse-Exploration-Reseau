@@ -1,7 +1,6 @@
 #pragma once
 #include "DCC2CAN_TaskDcc.h"
 #include "DCC2CAN_TaskCan.h"
-#include "DCC2CAN_TaskCanRx.h"
 #include "DCC2CAN_Supervision.h"
 #include "DCC2CAN_DccDecoder.h"
 #include "DCC2CAN_CanBooster.h"

@@ -2,60 +2,45 @@
 DCC2CAN_State.cpp / .h
 
 🎯 Rôle
-Module centralisant l'état interne du Booster.
-Il stocke les informations dynamiques nécessaires aux tâches FreeRTOS :
-dernier événement DCC, état du CAN Monitor, supervision, etc.
+Module centralisant l'état logique du flux DCC pour le module DCC2CAN.
+Il stocke le dernier événement DCC (bit, phase, durée, type) ainsi que l'état
+de supervision lié à la présence du signal DCC.
 
 Ce module sert de passerelle entre :
-- taskDcc()        → met à jour l'état DCC
-- taskCan()        → envoie les trames CAN Booster
-- taskSupervision()→ surveille le fonctionnement du Booster
+- taskDcc()         → met à jour l'état DCC (g_state.lastEvent)
+- taskCan()         → envoie le bit DCC courant sur le CAN Booster (TX only)
+- taskSupervision() → surveille la présence du signal DCC (failsafe)
 
 📌 Fonctionnement
 - g_state :
-    • structure contenant le dernier événement DCC reçu
-      (bit, phase, durée, type)
-    • status : état du Booster (RUNNING, DCC_LOST, OVERCURRENT, RECOVERY)
-    • lastEventTime : timestamp du dernier événement DCC
-- canMonitorEnabled / canMonitorFilter :
-    • variables globales utilisées par le CLI pour activer
-      le sniffer CAN Booster
+    • lastEvent      : dernier événement DCC (bit, phase, dt_us, type)
+    • status         : état logique (RUNNING, DCC_LOST, RECOVERY)
+    • lastEventTime  : timestamp du dernier événement DCC
 
 - BoosterState_init() :
-    • Crée le mutex de synchronisation
+    • initialise le mutex de synchronisation
 
 - BoosterState_updateFromDcc() :
-    • copie les champs d'un événement DCC (volatile)
-      vers l'état interne du Booster + timestamp actuel
-    • thread-safe via mutex
+    • copie l'événement DCC (volatile) vers l'état interne + timestamp
 
 - BoosterState_sendCan() :
     • envoie le bit DCC courant via le driver CAN Booster
-    • sauf si l'état est DCC_LOST ou RECOVERY
-    • thread-safe via mutex
+      (désactivé en cas de DCC_LOST ou RECOVERY)
 
 - BoosterState_supervise() :
-    • Détection timeout DCC (500ms)
-    • Gestion du failsafe et recovery (1s cooldown)
-    • Changement d'état automatique
+    • détecte la perte du signal DCC (timeout)
+    • gère le failsafe (DCC_LOST)
+    • gère le retour à RUNNING après cooldown (RECOVERY)
 
 📌 Particularités
-- Thread-safe via mutex (dual-core ESP32 compatible)
-- Supervision réactive tous les 20ms
-- Failsafe automatique en cas de perte signal DCC
-- Recovery automatique quand signal revient
-
-🔗 Dépendances
-- DCC2CAN_DccDecoder  → structure DccEvent
-- DCC2CAN_CanBooster  → envoi des trames CAN Booster
-- DCC2CAN_Cli         → activation du CAN Monitor
-- FreeRTOS            → mutex de synchronisation
+- Thread-safe via mutex (compatible dual-core ESP32)
+- Supervision périodique exécutée par taskSupervision()
+- Ne gère ni télémétrie, ni RailCom, ni monitoring CAN
+- Supervision purement logique du flux DCC
 */
 
 #include "DCC2CAN_State.h"
 
-volatile bool canMonitorEnabled = false;
-volatile int32_t canMonitorFilter = -1;
 volatile BoosterRuntimeState g_state = {
     {DCC_EVT_BIT, 0, 0, 0},  // lastEvent
     BSTATE_RUNNING,           // status
@@ -137,8 +122,4 @@ void BoosterState_supervise()
     }
 
     xSemaphoreGive(gStateUpdateMutex);
-
-    // Envoyer télémétrie de supervision (pas besoin de mutex ici)
-    // TODO: Intégrer mesure réelle de courant/tension
-    // CanBooster_sendTelemetry(mA, mV, status);
 }

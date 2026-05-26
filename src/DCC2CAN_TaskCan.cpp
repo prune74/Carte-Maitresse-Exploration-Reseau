@@ -2,11 +2,11 @@
 DCC2CAN_TaskCan.cpp / .h
 
 🎯 Rôle
-Tâche FreeRTOS responsable de l’envoi des trames CAN Booster.
-Elle récupère l’état courant du Booster (bit DCC, phase, etc.) et transmet
-périodiquement les informations nécessaires au bus CAN interne de l’ESP32.
+Tâche FreeRTOS responsable de l’envoi des trames CAN Booster. Elle transmet
+le bit DCC logique courant (0, 1 ou cutout) ainsi que sa phase, tels qu’ils
+sont fournis par le décodeur DCC.
 
-Cette tâche constitue le lien entre le décodage DCC et le réseau CAN Booster.
+Cette tâche constitue le lien entre le décodeur DCC et le bus CAN Booster.
 
 📌 Fonctionnement
 - taskCan() :
@@ -14,20 +14,19 @@ Cette tâche constitue le lien entre le décodage DCC et le réseau CAN Booster.
     • appelle BoosterState_sendCan() pour envoyer :
         - bit DCC courant
         - phase du signal
-        - autres informations selon l’évolution du protocole
-    • garantit un débit CAN stable et régulier
+    • garantit un débit CAN stable et régulier pour les boosters
 
 📌 Particularités
 - La tâche est volontairement très légère : aucune logique métier ici.
 - Le rythme de 2 ms assure une réactivité suffisante pour suivre le flux DCC.
-- Le module utilise l’état global du Booster (g_state) mis à jour par taskDcc().
-- Le driver CAN Booster (DCC2CAN_CanBooster) encapsule toute la logique
-  d’encodage et d’envoi des trames.
+- L’état DCC est mis à jour par taskDcc() et récupéré via BoosterState.
+- Le driver CAN Booster (DCC2CAN_CanBooster) encapsule l’encodage et l’envoi
+  des trames CAN.
 
 🔗 Dépendances
-- DCC2CAN_State       → accès au dernier événement DCC
+- DCC2CAN_State       → accès au dernier bit DCC + phase
 - DCC2CAN_CanBooster  → envoi des trames CAN
-- FreeRTOS                    → gestion de la tâche
+- FreeRTOS            → gestion de la tâche
 */
 
 #include "DCC2CAN_TaskCan.h"

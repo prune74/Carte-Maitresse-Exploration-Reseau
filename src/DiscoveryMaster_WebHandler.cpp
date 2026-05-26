@@ -1,66 +1,7 @@
-/*
-DiscoveryMaster_WebHandler.cpp / .h
-
-🎯 Rôle
-Serveur Web et interface de communication du module SAMain.
-Ce module gère :
-- l’hébergement des pages HTML/CSS/JS
-- l’API Discovery via WebSocket
-- la réception des commandes envoyées depuis l’interface Web
-- la transmission des ordres au bus CAN Discovery via DiscoveryMaster_CanService
-
-Il constitue l’interface utilisateur du système Discovery 2026.
-
-📌 Fonctionnement
-- init(port) :
-    • crée un serveur web AsyncWebServer
-    • crée un WebSocket /ws
-    • attache un callback d’événements WebSocket
-    • configure les routes HTTP (fichiers SPIFFS)
-    • démarre le serveur
-
-- loop() :
-    • nettoie les clients WebSocket inactifs
-
-- _WsEvent() :
-    • gère les événements WebSocket :
-        - connexion / déconnexion
-        - réception de données JSON
-    • décode les commandes envoyées par l’interface Web :
-        - wifi_on        → active/désactive le WiFi
-        - discovery_on   → active/désactive le réseau Discovery
-        - save           → demande de sauvegarde globale
-        - restartEsp     → demande de redémarrage des satellites
-    • transmet les commandes au bus CAN via DiscoveryMaster_CanService
-
-- handleWebSocketMessage() :
-    • gestion simplifiée de messages texte (ex : "toggle")
-
-- route() :
-    • définit les routes HTTP pour servir :
-        - index.html
-        - w3.css
-        - style.css
-        - script.js
-        - settings.json
-        - favicon.png
-    • gère les erreurs 404
-
-📌 Particularités
-- Utilise AsyncWebServer et AsyncWebSocket pour un fonctionnement non bloquant.
-- Le WebSocket permet un échange bidirectionnel en temps réel avec l’interface Web.
-- Le module agit comme un pont entre l’utilisateur et le réseau Discovery.
-- Les commandes reçues sont immédiatement propagées au bus CAN via _can->sendXXX().
-- L’interface Web peut piloter l’ensemble du réseau Discovery 2026.
-
-🔗 Dépendances
-- DiscoveryMaster_CanService (envoi des commandes Discovery)
-- DiscoveryMaster_Settings (mise à jour des paramètres)
-- SPIFFS (fichiers HTML/CSS/JS)
-- ArduinoJson (décodage des messages WebSocket)
-*/
-
 #include "DiscoveryMaster_WebHandler.h"
+
+extern DiscoveryMaster_SatManager satManager;
+extern DiscoveryMaster_CanService canService;
 
 DiscoveryMaster_WebHandler::DiscoveryMaster_WebHandler(DiscoveryMaster_CanService *canService)
     : _server(nullptr), _ws(nullptr), _can(canService)
@@ -92,6 +33,47 @@ void DiscoveryMaster_WebHandler::loop()
     _ws->cleanupClients();
 }
 
+// ---------------------------------------------------------------------------
+// PUSH WEBSOCKET AUTOMATIQUE
+// ---------------------------------------------------------------------------
+void DiscoveryMaster_WebHandler::pushStatus()
+{
+    StaticJsonDocument<1024> doc;
+
+    // --- État global ---
+    doc["wifi_on"]      = DiscoveryMaster_Settings::WIFI_ON;
+    doc["discovery_on"] = DiscoveryMaster_Settings::DISCOVERY_ON;
+
+    // --- État CAN (supervision) ---
+    doc["can_ok"]       = canService.isCanOK();
+    doc["can_last_ms"]  = canService.lastRxAgeMs(); // âge de la dernière trame reçue
+
+    // --- Liste des satellites ---
+    JsonArray satsJson = doc.createNestedArray("sats");
+
+    const DiscoveryMaster_Satellite *sats = satManager.getAll();
+
+    for (int i = 0; i < NB_SAT; i++)
+    {
+        const auto &s = sats[i];
+        if (s.id != NO_ID)
+        {
+            JsonObject o = satsJson.createNestedObject();
+            o["id"]       = s.id;
+            o["online"]   = s.online;
+            o["lastSeen"] = s.lastSeen;
+        }
+    }
+
+    // --- Envoi WebSocket ---
+    String json;
+    serializeJson(doc, json);
+    _ws->textAll(json);
+}
+
+// ---------------------------------------------------------------------------
+// MESSAGE TEXTE SIMPLE
+// ---------------------------------------------------------------------------
 void DiscoveryMaster_WebHandler::handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 {
     AwsFrameInfo *info = (AwsFrameInfo *)arg;
@@ -105,6 +87,9 @@ void DiscoveryMaster_WebHandler::handleWebSocketMessage(void *arg, uint8_t *data
     }
 }
 
+// ---------------------------------------------------------------------------
+// ÉVÉNEMENTS WEBSOCKET
+// ---------------------------------------------------------------------------
 void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
                                           AsyncWebSocketClient *client,
                                           AwsEventType type,
@@ -131,9 +116,7 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
 
         if (error)
         {
-#ifdef DEBUG
-            debug.println("Parsing failed");
-#endif
+            Serial.println("JSON parse error");
             return;
         }
 
@@ -144,11 +127,7 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
         {
             DiscoveryMaster_Settings::WIFI_ON = doc1["wifi_on"].as<bool>();
             _can->sendWifiOnOff(DiscoveryMaster_Settings::WIFI_ON);
-            DiscoveryMaster_Settings::writeFile();  // Persist setting
-
-#ifdef DEBUG
-            debug.printf(DiscoveryMaster_Settings::WIFI_ON ? "Wifi : on\n" : "Wifi : off\n");
-#endif
+            DiscoveryMaster_Settings::writeFile();
         }
 
         // --- DISCOVERY ON/OFF ---
@@ -156,28 +135,18 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
         {
             DiscoveryMaster_Settings::DISCOVERY_ON = doc1["discovery_on"].as<bool>();
             _can->sendDiscoveryOnOff(DiscoveryMaster_Settings::DISCOVERY_ON);
-            DiscoveryMaster_Settings::writeFile();  // Persist setting
-
-#ifdef DEBUG
-            debug.printf(DiscoveryMaster_Settings::DISCOVERY_ON ? "Discovery : on\n" : "Discovery : off\n");
-#endif
+            DiscoveryMaster_Settings::writeFile();
         }
 
         // --- SAVE ---
         if (message.indexOf("save") >= 0)
         {
-#ifdef DEBUG
-            debug.println("save all");
-#endif
             _can->sendSaveAll();
         }
 
         // --- RESTART ---
         if (message.indexOf("restartEsp") >= 0)
         {
-#ifdef DEBUG
-            debug.println("restartEsp");
-#endif
             _can->sendRestartAll();
         }
     }
@@ -190,6 +159,9 @@ void DiscoveryMaster_WebHandler::notifyClients()
     _ws->textAll(String("ok"));
 }
 
+// ---------------------------------------------------------------------------
+// ROUTES HTTP
+// ---------------------------------------------------------------------------
 void DiscoveryMaster_WebHandler::route()
 {
     _server->on("/", HTTP_GET, [](AsyncWebServerRequest *request)

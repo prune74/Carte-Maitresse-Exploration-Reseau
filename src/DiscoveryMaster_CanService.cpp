@@ -5,37 +5,6 @@ DiscoveryMaster_CanService.cpp / .h
 Driver CAN du module SAMain basé sur un MCP2515 (ACAN2515).
 Il constitue le cœur du protocole Discovery 2026 : réception, décodage et
 émission des trames Discovery au format 29 bits (Märklin étendu).
-
-📌 Fonctionnement
-- Initialise le contrôleur CAN MCP2515 via SPI.
-- Utilise une ISR statique (canISR) imposée par ACAN2515.
-- Assure la réception des trames Discovery :
-    • extraction de la priorité
-    • extraction de la commande
-    • gestion du flag réponse
-    • identification de l’expéditeur
-- Traite les commandes Discovery natives :
-    • 0xB2 → Test du bus CAN (réponse 0xB3)
-    • 0xB4 → Demande d’identifiant (réponse 0xB5)
-- Met à jour dynamiquement la liste des satellites via DiscoveryMaster_SatManager.
-- Fournit une API d’envoi de trames pour :
-    • le protocole Discovery
-    • les commandes Web
-    • le Watchdog Discovery 2026 (sendMessage)
-
-📌 Particularités
-- Le bus CAN Discovery est totalement indépendant du bus Booster.
-- Le format 29 bits suit strictement la structure Discovery :
-      [priorité | commande | flag réponse | ID expéditeur]
-- Le module encapsule toute la logique bas niveau :
-    • réception matérielle
-    • décodage protocolaire
-    • envoi sécurisé via ACAN2515
-- Une trame brute est mise en tampon (lastFrame) pour permettre au Watchdog
-  de surveiller les heartbeat sans interférer avec le protocole.
-- Le module est conçu pour évoluer vers un protocole Discovery 2026 complet
-  (supervision, diagnostics, commandes avancées).
-
 */
 
 #include "DiscoveryMaster_CanService.h"
@@ -62,6 +31,10 @@ DiscoveryMaster_CanService::DiscoveryMaster_CanService(uint8_t csPin, uint8_t in
 {
     g_canService = this;
     hasNewFrame = false;
+
+    // Supervision CAN
+    _lastRxTime = millis();
+    _canOK = false; // au démarrage, on attend une première trame
 }
 
 // ---------------------------------------------------------------------------
@@ -106,6 +79,10 @@ void DiscoveryMaster_CanService::loop()
 
     if (_can.receive(frameIn))
     {
+        // Supervision CAN : on note l’heure de la dernière trame
+        _lastRxTime = millis();
+        _canOK = true;
+
         // Stockage pour le Watchdog
         lastFrame = frameIn;
         hasNewFrame = true;
@@ -115,6 +92,31 @@ void DiscoveryMaster_CanService::loop()
 #endif
         handleFrame(frameIn);
     }
+}
+
+// ---------------------------------------------------------------------------
+// SUPERVISION CAN
+// ---------------------------------------------------------------------------
+bool DiscoveryMaster_CanService::checkBus(uint32_t timeoutMs)
+{
+    uint32_t now = millis();
+    uint32_t age = now - _lastRxTime;
+
+    if (age > timeoutMs)
+    {
+        _canOK = false;
+    }
+    else
+    {
+        _canOK = true;
+    }
+
+    return _canOK;
+}
+
+uint32_t DiscoveryMaster_CanService::lastRxAgeMs() const
+{
+    return millis() - _lastRxTime;
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +168,10 @@ void DiscoveryMaster_CanService::handleFrame(const CANMessage &frameIn)
 
     case 0xB4:
         handleCmdRequestId(idExp, priorite);
+        break;
+
+    case 0xB0: // Heartbeat satellite
+        satManager.updateHeartbeat(idExp);
         break;
 
     default:

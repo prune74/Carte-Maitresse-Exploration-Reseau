@@ -2,67 +2,62 @@
 DCC2CAN_main.cpp / .h
 
 🎯 Rôle
-Main logique du module DCC_CAN-Booster.
-Ce fichier orchestre l’initialisation du Booster et la création des tâches
-FreeRTOS responsables du traitement temps réel : DCC, CAN Booster, supervision
-et CLI. Il constitue le point d’entrée du sous-système Booster.
+Point d’entrée du module DCC2CAN. Ce fichier initialise les sous-modules
+(DCC, CAN Booster, CLI) et crée les tâches FreeRTOS nécessaires au traitement
+temps réel du signal DCC et à son émission sur le bus CAN Booster.
 
 📌 Fonctionnement
 - Booster_setup() :
+    • Initialise la gestion d’état (BoosterState)
     • Initialise le décodeur DCC (ISR + file d’événements)
-    • Initialise le driver CAN Booster (CAN interne ESP32)
+    • Initialise le driver CAN Booster (émission uniquement)
     • Initialise le CLI série
     • Crée les tâches FreeRTOS :
         - taskDcc        → traitement des événements DCC
         - taskCan        → envoi des trames CAN Booster
-        - taskCanRx      → réception CAN Booster (optionnel)
-        - taskSupervision→ surveillance et failsafe
+        - taskSupervision→ surveillance du signal DCC (failsafe)
 
 - Booster_loop() :
     • Exécute la tâche CLI (lecture des commandes série)
-    • Laisse FreeRTOS gérer les tâches temps réel
-    • Boucle légère et non bloquante
+    • Boucle légère et non bloquante (FreeRTOS gère les tâches temps réel)
 
 📌 Particularités
-- Le module est totalement indépendant du réseau Discovery (MCP2515).
-- Le découpage en fichiers séparés (TaskDcc, TaskCan, TaskCanRx, Supervision,
-  State) garantit une architecture claire, modulaire et maintenable.
-- Le traitement DCC est interrupt-driven, tandis que le CAN et la supervision
-  fonctionnent en tâches FreeRTOS.
+- Le bus CAN Booster est unidirectionnel pour DCC2CAN : émission uniquement.
+- Aucune réception CAN n’est utilisée ni prévue dans ce module.
+- Le découpage en modules séparés (DccDecoder, TaskDcc, TaskCan, Supervision,
+  State, CLI) garantit une architecture claire et maintenable.
 - Le main reste volontairement minimal : aucune logique métier ici.
 
 🔗 Dépendances
 - DCC2CAN_DccDecoder   → décodage DCC
-- DCC2CAN_CanBooster   → driver CAN Booster
+- DCC2CAN_CanBooster   → émission CAN Booster
 - DCC2CAN_Cli          → interface série
 - DCC2CAN_TaskDcc      → tâche DCC
-- DCC2CAN_TaskCan      → tâche CAN
-- DCC2CAN_TaskCanRx    → tâche CAN RX
+- DCC2CAN_TaskCan      → tâche CAN (TX)
 - DCC2CAN_Supervision  → failsafe / supervision
-- FreeRTOS                     → multitâche temps réel
+- FreeRTOS             → multitâche temps réel
 */
 
 #include "DCC2CAN_main.h"
 
 void Booster_setup()
 {
-    // Initialize state management
+    // Gestion d’état
     BoosterState_init();
 
-    // DCC decoder
+    // Décodeur DCC
     DccDecoder_begin();
 
-    // CAN Booster
+    // Driver CAN Booster (TX only)
     CanBooster_begin();
 
-    // CLI
+    // CLI série
     Cli_begin();
 
     // Tâches FreeRTOS
-    xTaskCreate(taskDcc, "DCC", 4096, NULL, 3, NULL);
-    xTaskCreate(taskCan, "CAN", 4096, NULL, 3, NULL);
-    xTaskCreate(taskCanRx, "CANRX", 4096, NULL, 2, NULL);
-    xTaskCreate(taskSupervision, "SUP", 2048, NULL, 1, NULL);
+    xTaskCreate(taskDcc,        "DCC", 4096, NULL, 3, NULL);
+    xTaskCreate(taskCan,        "CAN", 4096, NULL, 3, NULL);
+    xTaskCreate(taskSupervision,"SUP", 2048, NULL, 1, NULL);
 }
 
 void Booster_loop()

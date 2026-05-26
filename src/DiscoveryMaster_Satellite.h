@@ -2,20 +2,15 @@
 #include <Arduino.h>
 #include "DiscoveryMaster_Config.h"
 
-class DiscoveryMaster_Satellite
+struct DiscoveryMaster_Satellite
 {
-private:
-    uint16_t m_idNode;
-    uint8_t m_ip[4];
+    uint16_t id = NO_ID;
 
-public:
-    DiscoveryMaster_Satellite();
-    void begin();
+    uint8_t ip[4] = {0,0,0,0};   // optionnel si tu veux garder l’IP
 
-    // --- IMPORTANT : rendre id() const ---
-    uint16_t id() const;
+    uint32_t lastSeen = 0;       // mis à jour par le heartbeat
+    bool online = false;         // mis à jour par SatManager
 
-    void id(uint16_t);
-
-    static void watchDog(void *);
+    uint8_t type = 0;            // optionnel (booster, gateway, sensor…)
+    uint8_t version = 0;         // optionnel (firmware)
 };

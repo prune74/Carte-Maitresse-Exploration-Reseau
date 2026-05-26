@@ -1,28 +1,36 @@
 #pragma once
-
-#include "Arduino.h"
-#include <ArduinoJson.h>
-#include "DiscoveryMaster_Config.h"
-#include "DiscoveryMaster_Settings.h"
-#include "DiscoveryMaster_CanService.h"
-#include <AsyncTCP.h>
+#include <Arduino.h>
 #include <ESPAsyncWebServer.h>
-#include <SPIFFS.h>
-#include <SPI.h>
+#include <ArduinoJson.h>
+#include "DiscoveryMaster_CanService.h"
+#include "DiscoveryMaster_Settings.h"
+#include "DiscoveryMaster_SatManager.h"
 
 class DiscoveryMaster_WebHandler
 {
-protected:
+private:
     AsyncWebServer *_server;
     AsyncWebSocket *_ws;
     DiscoveryMaster_CanService *_can;
-    void _WsEvent(AsyncWebSocket *, AsyncWebSocketClient *, AwsEventType, void *, uint8_t *, size_t);
+
+    void _WsEvent(AsyncWebSocket *server,
+                  AsyncWebSocketClient *client,
+                  AwsEventType type,
+                  void *arg,
+                  uint8_t *data,
+                  size_t len);
 
 public:
     DiscoveryMaster_WebHandler(DiscoveryMaster_CanService *canService);
+
     void init(uint16_t webPort);
     void loop();
-    void handleWebSocketMessage(void *, uint8_t *, size_t);
+
+    void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
     void notifyClients();
+
+    // --- AJOUT POUR LE PUSH WEBSOCKET ---
+    void pushStatus();
+
     void route();
 };

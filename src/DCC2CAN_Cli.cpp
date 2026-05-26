@@ -2,36 +2,22 @@
 DCC2CAN_Cli.cpp / .h
 
 🎯 Rôle
-Interface CLI série du module Booster.
-Ce module fournit une console texte accessible via le port série, permettant
-de diagnostiquer, surveiller et contrôler le fonctionnement du Booster en temps réel.
-
-📌 Fonctionnement
-- Analyse les commandes saisies dans le terminal série.
-- Associe chaque commande à un handler dédié (tableau de commandes).
-- Permet d’afficher les statistiques du décodeur DCC, de redémarrer l’ESP32,
-  d’activer le mode debug, ou encore de contrôler le sniffer CAN interne.
+Interface CLI série du module DCC2CAN.
+Elle permet d'afficher des informations de diagnostic simples, comme les
+statistiques du décodeur DCC ou le redémarrage de l’ESP32.
 
 📌 Commandes disponibles
 - "stats"        → affiche les statistiques DCC (bits, cutout, erreurs)
 - "reset"        → redémarre l’ESP32
 - "debug on/off" → active/désactive les messages de debug
-- "scope on/off" → active le mode oscilloscope (nécessite recompilation)
-- "can on/off"   → active/désactive le sniffer CAN interne
-- "can filter X" → filtre les trames CAN par ID (hex), ou "off" pour désactiver
 
 📌 Particularités
-- Le CLI fonctionne indépendamment du CAN Discovery.
-- Le sniffer CAN utilise ACAN_ESP32 et peut afficher les trames reçues en temps réel.
-- Le module est léger, non bloquant, et s’intègre parfaitement dans la boucle FreeRTOS
-  du Booster (appelé via Booster_loop()).
-
+- Le CLI est volontairement minimal : aucune commande liée au Booster,
+  à la télémétrie ou au sniffer CAN.
+- Le module est non bloquant et s’intègre dans la boucle FreeRTOS.
 */
 
 #include "DCC2CAN_Cli.h"
-
-extern volatile bool canMonitorEnabled;
-extern volatile int32_t canMonitorFilter;
 
 static String input;
 
@@ -72,58 +58,14 @@ void cmd_debug_off(const String &)
     Serial.println("Debug OFF");
 }
 
-void cmd_scope_on(const String &)
-{
-    Serial.println("Scope mode ON (recompile needed)");
-}
-
-void cmd_scope_off(const String &)
-{
-    Serial.println("Scope mode OFF (recompile needed)");
-}
-
-// ---------------- CAN MONITOR (Étape 6) ----------------
-
-void cmd_can_on(const String &)
-{
-    canMonitorEnabled = true;
-    Serial.println("CAN monitor ON");
-}
-
-void cmd_can_off(const String &)
-{
-    canMonitorEnabled = false;
-    Serial.println("CAN monitor OFF");
-}
-
-void cmd_can_filter(const String &args)
-{
-    if (args == "off")
-    {
-        canMonitorFilter = -1;
-        Serial.println("CAN filter disabled");
-    }
-    else
-    {
-        int id = (int)strtol(args.c_str(), nullptr, 16);
-        canMonitorFilter = id;
-        Serial.printf("CAN filter set to 0x%03X\n", id);
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Tableau des commandes
 // ---------------------------------------------------------------------------
 static const CliCommand commands[] = {
-    {"stats", cmd_stats},
-    {"reset", cmd_reset},
-    {"debug on", cmd_debug_on},
+    {"stats",     cmd_stats},
+    {"reset",     cmd_reset},
+    {"debug on",  cmd_debug_on},
     {"debug off", cmd_debug_off},
-    {"scope on", cmd_scope_on},
-    {"scope off", cmd_scope_off},
-    {"can on", cmd_can_on},
-    {"can off", cmd_can_off},
-    {"can filter", cmd_can_filter},
 };
 
 // ---------------------------------------------------------------------------

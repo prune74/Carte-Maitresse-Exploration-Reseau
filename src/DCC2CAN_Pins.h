@@ -2,9 +2,10 @@
 DCC2CAN_Pins.h
 
 🎯 Rôle
-Définition centralisée des broches utilisées par le module DCC_CAN-Booster.
-Ce fichier regroupe toutes les constantes liées au câblage matériel du Booster,
-afin de garantir une configuration claire, cohérente et facilement modifiable.
+Définition centralisée des broches utilisées par le module DCC2CAN.
+Ce fichier regroupe toutes les constantes liées au câblage matériel du
+convertisseur DCC → CAN Booster, afin de garantir une configuration claire,
+cohérente et facilement modifiable.
 
 📌 Contenu
 - PIN_DCC_IN  : entrée logique du signal DCC (issue du XOR SN74LVC1G86)
@@ -15,10 +16,11 @@ afin de garantir une configuration claire, cohérente et facilement modifiable.
 📌 Particularités
 - Les broches sont définies sous forme de constantes gpio_num_t pour une
   compatibilité totale avec les API ESP-IDF et Arduino.
-- Ce fichier est utilisé par tous les modules du Booster : DccDecoder,
-  CanBooster, tâches FreeRTOS, CLI, etc.
-- Les broches sont spécifiques à la carte ESP32 utilisée pour le Booster.
+- Ce fichier est utilisé par les modules DccDecoder, CanBooster, tâches
+  FreeRTOS et CLI du firmware DCC2CAN.
+- Les broches correspondent à la carte ESP32 utilisée pour le module DCC2CAN.
 */
+
 
 #pragma once
 #include <Arduino.h>

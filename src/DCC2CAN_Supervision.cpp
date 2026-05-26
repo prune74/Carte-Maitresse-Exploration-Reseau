@@ -2,37 +2,30 @@
 DCC2CAN_Supervision.cpp / .h
 
 🎯 Rôle
-Tâche FreeRTOS dédiée à la supervision du Booster.
-Elle exécute périodiquement la logique de sécurité et de surveillance du module :
-perte du signal DCC, surintensité, coupure prolongée, état du booster, etc.
-
-Ce module constitue la couche "failsafe" du système DCC_CAN-Booster.
+Tâche FreeRTOS dédiée à la supervision du signal DCC. Elle vérifie
+périodiquement la présence du flux DCC logique et met à jour l'état de
+supervision (RUNNING, DCC_LOST, RECOVERY) via BoosterState_supervise().
 
 📌 Fonctionnement
 - taskSupervision() :
     • boucle FreeRTOS exécutée toutes les 20 ms
-    • appelle BoosterState_supervise() pour analyser l’état courant
+    • appelle BoosterState_supervise() pour analyser l'état du signal DCC
     • ne contient aucune logique métier : simple scheduler
 
 - BoosterState_supervise() (dans DCC2CAN_State.cpp) :
-    • point d’entrée pour :
-        - détection de perte du signal DCC
-        - gestion du failsafe
-        - surveillance du courant / tension
-        - état du booster (OK, OFF, FAULT…)
-        - logique RailCom (si nécessaire)
-    • actuellement minimal, prévu pour extension
+    • détecte la perte du signal DCC (timeout)
+    • gère l'état DCC_LOST (failsafe)
+    • gère le retour à RUNNING après le cooldown (RECOVERY)
 
 📌 Particularités
-- La supervision est séparée des tâches DCC et CAN pour garantir
-  une architecture claire et modulaire.
-- La fréquence de 20 ms permet une surveillance réactive sans surcharger
-  le CPU ni le bus CAN.
-- Le module ne dépend que de l’état global du Booster (g_state).
+- La supervision est séparée des tâches DCC et CAN pour une architecture claire.
+- La fréquence de 20 ms permet une détection rapide sans surcharge CPU.
+- Le module ne gère ni télémétrie, ni RailCom, ni mesures analogiques.
+- Le mécanisme est purement logique : supervision du flux DCC uniquement.
 
 🔗 Dépendances
-- DCC2CAN_State  → accès à l’état du Booster
-- FreeRTOS               → gestion de la tâche
+- DCC2CAN_State  → logique de supervision DCC
+- FreeRTOS       → gestion de la tâche
 */
 
 #include "DCC2CAN_Supervision.h"
