@@ -119,12 +119,12 @@ Bits:  28-25   |   24-17      |      16            |   15-0
 ```
 
 **Commandes Natives:**
-- `0xB2` Test Bus → `0xB3` Response
-- `0xB4` Request ID → `0xB5` Response
-- `0xBD` WiFi On/Off
-- `0xBE` Discovery On/Off
-- `0xBF` Save All Settings
-- `0xBC` Restart All
+- `CMD_SAT_TEST_BUS` Test Bus → `CMD_SAT_TEST_BUS_REPLY` Response
+- `CMD_SAT_REQUEST_ID` Request ID → `CMD_SAT_REQUEST_ID_REPLY` Response
+- `CMD_WIFI_ON_OFF` WiFi On/Off
+- `CMD_DISCOVERY_ON_OFF` Discovery On/Off
+- `CMD_SAVE_ALL` Save All Settings
+- `CMD_RESTART_ALL` Restart All
 
 **Web API:**
 - `GET /` - index.html
@@ -145,8 +145,8 @@ Bits:  28-25   |   24-17      |      16            |   15-0
 - Max satellites: 250
 
 **CAN Messages:**
-- `0x200` Heartbeat IN (from satellites)
-- `0x201` Emergency Stop OUT (to satellites)
+- `DISCOVERY_CAN_ID_HEARTBEAT` Heartbeat IN (from satellites)
+- `DISCOVERY_CAN_ID_EMERGENCY_STOP` Emergency Stop OUT (to satellites)
 
 ---
 

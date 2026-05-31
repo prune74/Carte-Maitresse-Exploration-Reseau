@@ -6,6 +6,7 @@
 #include "DiscoveryMaster_Config.h"
 #include "DiscoveryMaster_SatManager.h"
 #include "DiscoveryMaster_Settings.h"
+#include "DiscoveryMaster_Config.h"
 
 class DiscoveryMaster_CanService
 {
@@ -48,6 +49,9 @@ public:
     void sendDiscoveryOnOff(bool on);
     void sendSaveAll();
     void sendRestartAll();
+
+    // Commande N / HO (profil voie)
+    void sendTrackProfile(uint8_t profile);
 
     // --- Supervision CAN ---
     bool checkBus(uint32_t timeoutMs);      // à appeler périodiquement

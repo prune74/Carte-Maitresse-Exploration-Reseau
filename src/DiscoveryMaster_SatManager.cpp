@@ -1,42 +1,16 @@
+#include "DiscoveryMaster_SatManager.h"
+
 /*
-DiscoveryMaster_SatManager.cpp / .h
+DiscoveryMaster_SatManager.cpp — Version Discovery 2026
 
 🎯 Rôle
-Gestionnaire centralisé des satellites Discovery.
-Ce module maintient la liste des satellites connus, assure leur découverte,
-leur mise à jour et fournit des fonctions d’accès rapides (recherche, comptage).
-Il constitue la base de la supervision du réseau Discovery 2026.
-
-📌 Fonctionnement
-- Initialise un tableau fixe de NB_SAT satellites (DiscoveryMaster_Satellite).
-- addOrUpdate() :
-    • ajoute un nouveau satellite lorsqu’il apparaît sur le bus CAN
-    • ignore les doublons
-    • signale la découverte via Serial
-- getById() :
-    • retourne un pointeur vers un satellite existant
-- count() :
-    • retourne le nombre de satellites actuellement enregistrés
-
-📌 Particularités
-- La découverte des satellites est déclenchée par le driver CAN (DiscoveryMaster_CanService)
-  lorsqu’une trame valide est reçue (ex : commande 0xB2).
-- Le module est volontairement minimaliste pour l’instant :
-    • begin() et loop() sont prévus pour accueillir plus tard :
-        - heartbeat Discovery
-        - timeout de communication
-        - supervision avancée
-        - gestion d’état (online/offline)
-- Le tableau interne est statique pour garantir des performances constantes
-  et éviter les allocations dynamiques.
-
-🔗 Utilise
-- DiscoveryMaster_Satellite (instances internes)
-- DiscoveryMaster_CanService (déclenche la découverte)
-- DiscoveryMaster_Settings (ID maître, configuration Discovery)
+Implémentation du gestionnaire de satellites Discovery.
+Ce module est la source de vérité du réseau Discovery 2026 :
+- découverte des SA
+- mise à jour des heartbeat
+- gestion online/offline
+- supervision via Watchdog Master
 */
-
-#include "DiscoveryMaster_SatManager.h"
 
 DiscoveryMaster_SatManager::DiscoveryMaster_SatManager()
 {
@@ -132,3 +106,20 @@ uint8_t DiscoveryMaster_SatManager::count() const
     return c;
 }
 
+/*
+⭐ Méthode ajoutée pour Watchdog Discovery 2026
+Permet au Watchdog Master de détecter un SA offline
+sans accéder directement à _sats[] (encapsulation respectée).
+*/
+bool DiscoveryMaster_SatManager::hasOfflineSatellite(uint16_t &offlineId) const
+{
+    for (uint8_t i = 0; i < NB_SAT; i++)
+    {
+        if (_sats[i].id != NO_ID && _sats[i].online == false)
+        {
+            offlineId = _sats[i].id;
+            return true;
+        }
+    }
+    return false;
+}

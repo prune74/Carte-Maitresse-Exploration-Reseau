@@ -1,0 +1,215 @@
+/* DISCOVERY MASTER — DARK SOFT DASHBOARD */
+
+body {
+    margin: 0;
+    padding: 0;
+    background: #1f2127;
+    color: #e4e6eb;
+    font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Header */
+.header {
+    background: linear-gradient(135deg, #1f4fa8, #3b82f6);
+    padding: 20px;
+    text-align: center;
+    color: #f9fafb;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+/* Layout */
+.card {
+    background: rgba(32, 35, 43, 0.96);
+    border-radius: 14px;
+    padding: 22px;
+    margin: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.card h3 {
+    margin: 0 0 14px 0;
+    font-size: 19px;
+    font-weight: 500;
+    color: #e5e7eb;
+}
+
+/* Boutons */
+button {
+    border: none;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.18s ease-out;
+    color: #f9fafb;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+
+.btn-blue  { background: #3b82f6; }
+.btn-green { background: #22c55e; }
+.btn-red   { background: #ef4444; }
+
+/* 🟥 STOP — bouton plus intense */
+.btn-stop {
+    background: #dc2626;
+    box-shadow: 0 0 12px rgba(220, 38, 38, 0.45);
+}
+.btn-stop:hover {
+    box-shadow: 0 0 18px rgba(220, 38, 38, 0.65);
+}
+
+/* 🟩 CLEAR STOP — bouton plus lumineux */
+.btn-clear {
+    background: #16a34a;
+    box-shadow: 0 0 12px rgba(22, 163, 74, 0.45);
+}
+.btn-clear:hover {
+    box-shadow: 0 0 18px rgba(22, 163, 74, 0.65);
+}
+
+/* Etat STOP et CLEAR STOP */
+#stop_state {
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: 600;
+    background: #111827;
+    color: #e5e7eb;
+}
+.stop-active {
+    background: #7f1d1d;
+    color: #fecaca;
+}
+.stop-clear {
+    background: #064e3b;
+    color: #bbf7d0;
+}
+
+/* État Sauvegarde / Redémarrage */
+#save_state, #restart_state {
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: 600;
+    background: #111827;
+    color: #e5e7eb;
+    text-align: center;
+}
+
+.state-working {
+    background: #1e3a8a;   /* bleu foncé */
+    color: #bfdbfe;        /* bleu clair */
+}
+
+.state-ok {
+    background: #064e3b;   /* vert foncé */
+    color: #bbf7d0;        /* vert clair */
+}
+
+.state-error {
+    background: #7f1d1d;   /* rouge foncé */
+    color: #fecaca;        /* rouge clair */
+}
+
+/* Select */
+select {
+    background: #111827;
+    color: #e5e7eb;
+    border-radius: 999px;
+    border: 1px solid #4b5563;
+    padding: 8px 14px;
+    font-size: 14px;
+}
+
+/* Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+}
+
+.switch input { display: none; }
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    background-color: #4b5563;
+    border-radius: 999px;
+    top: 0; left: 0; right: 0; bottom: 0;
+    transition: .25s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #f9fafb;
+    border-radius: 50%;
+    transition: .25s;
+}
+
+input:checked + .slider {
+    background-color: #3b82f6;
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+/* CAN status */
+#can_status {
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: 500;
+    text-align: center;
+    background: #111827;
+}
+
+/* Satellites */
+.sat-item {
+    background: #111827;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 6px 0;
+    border: 1px solid rgba(75, 85, 99, 0.7);
+}
+
+.sat-online  { color: #22c55e; font-weight: 500; }
+.sat-offline { color: #f97316; font-weight: 500; }
+
+/* ------------------------------------------------------ */
+/* 🟦 GRID LAYOUT DISCOVERY 2026 — (NOUVEAU) */
+/* ------------------------------------------------------ */
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    padding: 18px;
+}
+
+.dashboard-column {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* Responsive mobile */
+@media (max-width: 900px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}

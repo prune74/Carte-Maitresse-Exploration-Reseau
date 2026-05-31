@@ -1,77 +1,76 @@
 /*
-DiscoveryWatchdog_Watchdog.cpp / SAWatchdog.h
+DiscoveryWatchdog_Watchdog.cpp — Version Discovery 2026
 
 🎯 Rôle
-Module central du Watchdog Discovery 2026.
-Il surveille l’activité des satellites via leurs heartbeat CAN et déclenche
-automatiquement un STOP d’urgence lorsqu’un satellite devient silencieux.
+Module central du Watchdog Master Discovery 2026.
+Il surveille l’activité des satellites via leurs heartbeat CAN (0x200)
+et déclenche automatiquement un STOP global (0x201) lorsqu’un satellite
+devient silencieux.
 
 📌 Fonctionnement
-- DiscoveryWatchdog_init() initialise la table des timestamps.
-- DiscoveryWatchdog_registerHeartbeat() met à jour l’heure du dernier heartbeat reçu.
-- DiscoveryWatchdog_supervise() analyse périodiquement les timeouts.
-- DiscoveryWatchdog_triggerEmergencyStop() envoie une trame CAN d’arrêt d’urgence
-  (format Discovery 29 bits) lorsqu’un satellite dépasse le délai autorisé.
-
-📌 Intégration FreeRTOS
-Le module est utilisé par deux tâches dédiées :
-    • DiscoveryWatchdog_TaskRx          → réception des heartbeat via CAN
-    • DiscoveryWatchdog_TaskSupervision → analyse des timeouts et STOP d’urgence
-Ces tâches sont déclarées dans SAWatchdog.h et créées dans DiscoveryWatchdog_main.cpp.
+- DiscoveryWatchdog_init() : reset interne
+- DiscoveryWatchdog_registerHeartbeat() : met à jour SatManager
+- DiscoveryWatchdog_supervise() :
+      • analyse les timeouts via SatManager
+      • déclenche STOP global si un SA est offline
 
 📌 Particularités
-- Fonctionne indépendamment du protocole Discovery (pas de décodage de commande).
-- Utilise une API publique du driver CAN (sendMessage) pour garantir l’isolation
-  entre protocole Discovery et supervision.
-- Architecture modulaire : le Watchdog peut être activé ou désactivé
-  indépendamment du module SAMain.
-- Conçu pour assurer la sécurité du réseau Discovery 2026 en détectant les
-  satellites silencieux ou défaillants.
+- STOP Discovery 2026 = ID 0x201, 11 bits, len = 0
+- Heartbeat SA = ID 0x200, 11 bits, data = [ID_H, ID_L]
+- Utilise SatManager comme source de vérité
 */
 
 #include "DiscoveryWatchdog_Watchdog.h"
+#include "DiscoveryMaster_SatManager.h"
+#include "DiscoveryMaster_CanService.h"
 
+extern DiscoveryMaster_SatManager satManager;
 extern DiscoveryMaster_CanService canService;
 
-volatile uint32_t wd_lastHeartbeat[WD_MAX_SAT] = {0};
-
+// ---------------------------------------------------------------------------
+// Initialisation
+// ---------------------------------------------------------------------------
 void DiscoveryWatchdog_init()
 {
-    for (uint16_t i = 0; i < WD_MAX_SAT; i++)
-        wd_lastHeartbeat[i] = 0;
+    // Rien à faire : SatManager gère déjà lastSeen/online
 }
 
+// ---------------------------------------------------------------------------
+// Mise à jour heartbeat (appelé par TaskRx)
+// ---------------------------------------------------------------------------
 void DiscoveryWatchdog_registerHeartbeat(uint16_t satId)
 {
-    if (satId < WD_MAX_SAT)
-        wd_lastHeartbeat[satId] = millis();
+    satManager.updateHeartbeat(satId);
 }
 
-void DiscoveryWatchdog_triggerEmergencyStop(uint16_t satId)
+// ---------------------------------------------------------------------------
+// STOP global Discovery 2026
+// ---------------------------------------------------------------------------
+void DiscoveryWatchdog_triggerEmergencyStop()
 {
     CANMessage msg;
-    msg.id = DISCOVERY_CAN_ID_EMERGENCY_STOP;
-    msg.ext = true;
-    msg.len = 2;
-    msg.data[0] = (satId >> 8) & 0xFF;
-    msg.data[1] = satId & 0xFF;
+    msg.id  = DISCOVERY_CAN_ID_EMERGENCY_STOP; // 0x201
+    msg.ext = false;                           // 11 bits
+    msg.len = 0;                               // STOP global = aucune data
 
     canService.sendMessage(msg);
+    Serial.println("[WD] STOP global envoyé !");
 }
 
+// ---------------------------------------------------------------------------
+// Supervision (appelé par TaskSupervision)
+// ---------------------------------------------------------------------------
 void DiscoveryWatchdog_supervise()
 {
-    uint32_t now = millis();
+    // Mise à jour des états online/offline
+    satManager.checkTimeouts(WD_TIMEOUT_MS);
 
-    for (uint16_t id = 1; id < WD_MAX_SAT; id++)
+    // Vérification d’un satellite offline
+    uint16_t offlineId = 0;
+
+    if (satManager.hasOfflineSatellite(offlineId))
     {
-        if (wd_lastHeartbeat[id] == 0)
-            continue;
-
-        if (now - wd_lastHeartbeat[id] > WD_TIMEOUT_MS)
-        {
-            DiscoveryWatchdog_triggerEmergencyStop(id);
-            wd_lastHeartbeat[id] = 0;
-        }
+        Serial.printf("[WD] Satellite %d OFFLINE → STOP global\n", offlineId);
+        DiscoveryWatchdog_triggerEmergencyStop();
     }
 }

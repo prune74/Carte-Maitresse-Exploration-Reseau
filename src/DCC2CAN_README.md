@@ -16,7 +16,7 @@ Aucune réception CAN, aucune télémétrie, aucun RailCom.
 ---
 
 ## 🧩 Architecture générale
-
+```text
 DCC (LaBox)
     │
     ▼
@@ -36,7 +36,7 @@ CanBooster (ACAN_ESP32)
     │
     ▼
 Bus CAN Booster (TX only)
-
+```
 ---
 
 ## 📦 Sous-modules
@@ -127,7 +127,7 @@ En cas de DCC_LOST ou RECOVERY :
 ---
 
 ## 📁 Structure du dossier
-
+```text
 SCR/
 ├── DCC2CAN_main.cpp
 ├── DCC2CAN_Pins.h
@@ -138,7 +138,7 @@ SCR/
 ├── DCC2CAN_State.*
 ├── DCC2CAN_CanBooster.*
 └── DCC2CAN_README.md
-
+```
 ---
 
 ## ✔️ Statut

@@ -1,93 +1,95 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="fr">
 <head>
-    <title>Discovery Master Board</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8" />
-    <link rel="icon" type="image/png" sizes="16X16" href="favicon.png">
-    <link rel="stylesheet" type="text/css" href="w3.css">
-    <script src="script.js" type="text/javascript"></script>
-
-    <style>
-        .status-box {
-            padding: 10px;
-            margin: 10px 0;
-            color: white;
-            font-weight: bold;
-        }
-        .sat-item {
-            padding: 8px;
-            margin: 5px;
-            border: 1px solid #ccc;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Discovery Master Board</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="script.js"></script>
 </head>
 
 <body>
+  <header class="header">Discovery Master Board</header>
 
-    <!--Titre-->
-    <div class="w3-card w3-blue w3-padding-small w3-center">
-        <h3>Locoduino : Discovery Master Board</h3>
-    </div>
+  <!-- 🟦 GRID LAYOUT -->
+  <main class="dashboard-grid">
 
-    <p class="w3-margin w3-center w3-padding-12">
-        <span id='messages' class="w3-wide w3-text-red"></span>
-    </p>
+    <!-- 🟩 COLONNE GAUCHE -->
+    <section class="dashboard-column">
 
-    <!-- ÉTATS GLOBAUX -->
-    <div class="w3-margin w3-card w3-padding-24">
-        <table width="80%" align="center">
-            <tr>
-                <td width="30%">Main ID :</td>
-                <td width="20%">
-                    <input id="idNode" name="idNode" size="10" type="text" value="254" disabled>
-                </td>
-                <td width="20%"></td>
-                <td width="20%"></td>
-            </tr>
+      <!-- SYSTÈME -->
+      <div class="card">
+        <h3>Système</h3>
+        <div class="switch-group">
+          <label>WiFi :</label>
+          <label class="switch">
+            <input type="checkbox" id="wifi_on" onclick="wifi_on(this)">
+            <span class="slider"></span>
+          </label>
 
-            <tr>
-                <td>Wifi (all) :</td>
-                <td>
-                    <input name="wifi_on" type="checkbox" id="wifi_on" onclick="wifi_on(this)">
-                </td>
+          <label>Discovery :</label>
+          <label class="switch">
+            <input type="checkbox" id="discovery_on" onclick="discovery_on(this)">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
 
-                <td>Discovery (all) :</td>
-                <td>
-                    <input name="discovery_on" type="checkbox" id="discovery_on" onclick="discovery_on(this)">
-                </td>
-            </tr>
-        </table>
-    </div>
+      <!-- PROFIL VOIE -->
+      <div class="card">
+        <h3>Profil voie</h3>
+        <div class="inline">
+          <select id="track_profile">
+            <option value="0">N (12V)</option>
+            <option value="1">HO (15V)</option>
+          </select>
+          <button class="btn-blue" onclick="set_profile()">Appliquer</button>
+        </div>
+      </div>
 
-    <!-- ÉTAT CAN -->
-    <div class="w3-margin w3-card w3-padding-24">
+      <!-- ÉTAT CAN -->
+      <div class="card">
         <h3>État du bus CAN</h3>
-        <div id="can_status" class="status-box" style="background:#444;">?</div>
-    </div>
+        <div id="can_status" class="status">?</div>
+      </div>
 
-    <!-- SATELLITES -->
-    <div class="w3-margin w3-card w3-padding-24">
+    </section>
+
+    <!-- 🟦 COLONNE DROITE -->
+    <section class="dashboard-column">
+
+      <!-- SÉCURITÉ -->
+      <div class="card center">
+        <h3>Sécurité Discovery 2026</h3>
+
+        <!-- Indicateur STOP -->
+        <div id="stop_state" class="status">État : inconnu</div>
+
+        <button class="btn-stop" onclick="send_stop()">STOP global</button>
+        <button class="btn-clear" onclick="send_clear_stop()">CLEAR STOP</button>
+      </div>
+
+      <!-- SATELLITES -->
+      <div class="card">
         <h3>Satellites découverts</h3>
         <div id="sat_list"></div>
-    </div>
+      </div>
 
-    <!-- BOUTONS -->
-    <div class="w3-margin w3-card w3-padding-24" style="text-align: center">
-        <button id="save" name="save" onclick="save(this)"
-            class="w3-button w3-green w3-large w3-ripple" style="width:30%;">save all nodes</button>
+      <!-- ACTIONS GLOBALES -->
+      <div class="card center">
+        
+        <!-- Indicateur sauvegarde -->
+        <div id="save_state" class="status">Sauvegarde : en attente</div>
 
-        <button id="restartEsp" name="restartEsp" onclick="restartEsp(this)"
-            class="w3-button w3-red w3-large w3-ripple" style="width:30%;">restart all nodes</button>
-    </div>
+        <!-- Indicateur redémarrage -->
+        <div id="restart_state" class="status">Redémarrage : en attente</div>
 
-    <div class="w3-margin">
-        <a href="https://alkans.fr/locoduino/satellites_v2/document-pedagogique-signaux-regimes-exploitation-v1.pdf"
-           target="_blank">Signaux :</a>
-    </div>
+        <button class="btn-green" onclick="save()">Sauvegarder tous les nœuds</button>
+        <button class="btn-red" onclick="restartEsp()">Redémarrer tous les nœuds</button>
+      </div>
 
-    <!-- RAW DATA -->
-    <div id="rawData" class="w3-margin w3-card w3-padding-24">Raw data</div>
+    </section>
 
+  </main>
 </body>
 </html>

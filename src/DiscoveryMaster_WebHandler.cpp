@@ -44,13 +44,15 @@ void DiscoveryMaster_WebHandler::pushStatus()
     doc["wifi_on"]      = DiscoveryMaster_Settings::WIFI_ON;
     doc["discovery_on"] = DiscoveryMaster_Settings::DISCOVERY_ON;
 
+    // 🔥 Profil voie (N / HO)
+    doc["track_profile"] = DiscoveryMaster_Settings::track_profile;
+
     // --- État CAN (supervision) ---
     doc["can_ok"]       = canService.isCanOK();
-    doc["can_last_ms"]  = canService.lastRxAgeMs(); // âge de la dernière trame reçue
+    doc["can_last_ms"]  = canService.lastRxAgeMs();
 
     // --- Liste des satellites ---
     JsonArray satsJson = doc.createNestedArray("sats");
-
     const DiscoveryMaster_Satellite *sats = satManager.getAll();
 
     for (int i = 0; i < NB_SAT; i++)
@@ -100,13 +102,13 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
     switch (type)
     {
     case WS_EVT_CONNECT:
-        Serial.printf("WebSocket client #%u connected from %s\n",
+        Serial.printf("Client WebSocket #%u connecté depuis %s\n",
                       client->id(),
                       client->remoteIP().toString().c_str());
         break;
 
     case WS_EVT_DISCONNECT:
-        Serial.printf("WebSocket client #%u disconnected\n", client->id());
+        Serial.printf("Client WebSocket #%u déconnecté\n", client->id());
         break;
 
     case WS_EVT_DATA:
@@ -116,7 +118,7 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
 
         if (error)
         {
-            Serial.println("JSON parse error");
+            Serial.println("Erreur JSON");
             return;
         }
 
@@ -148,6 +150,54 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
         if (message.indexOf("restartEsp") >= 0)
         {
             _can->sendRestartAll();
+        }
+
+        // -------------------------------------------------------------------
+        // 🔥 PROFIL VOIE (N / HO)
+        // -------------------------------------------------------------------
+        if (message.indexOf("set_profile") >= 0)
+        {
+            uint8_t profile = doc1["value"] | 0;
+
+            Serial.printf("Changement profil voie demandé : %u\n", profile);
+
+            // Sauvegarde
+            DiscoveryMaster_Settings::track_profile = profile;
+            DiscoveryMaster_Settings::writeFile();
+
+            // Envoi CAN vers tous les SA
+            _can->sendTrackProfile(profile);
+
+            // Mise à jour immédiate de l’UI
+            pushStatus();
+        }
+
+        // -------------------------------------------------------------------
+        // 🟥 STOP GLOBAL (0x201)
+        // -------------------------------------------------------------------
+        if (message.indexOf("stop") >= 0)
+        {
+            CANMessage msg;
+            msg.id  = DISCOVERY_CAN_ID_EMERGENCY_STOP; // 0x201
+            msg.ext = false;
+            msg.len = 0;
+
+            _can->sendMessage(msg);
+            Serial.println("[WEB] STOP global envoyé !");
+        }
+
+        // -------------------------------------------------------------------
+        // 🟩 CLEAR STOP GLOBAL (0x202)
+        // -------------------------------------------------------------------
+        if (message.indexOf("clear_stop") >= 0)
+        {
+            CANMessage msg;
+            msg.id  = DISCOVERY_CAN_ID_CLEAR_STOP; // 0x202
+            msg.ext = false;
+            msg.len = 0;
+
+            _can->sendMessage(msg);
+            Serial.println("[WEB] CLEAR STOP envoyé !");
         }
     }
     break;

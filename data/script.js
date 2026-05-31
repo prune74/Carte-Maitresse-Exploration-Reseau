@@ -1,80 +1,162 @@
-const gateway = 'ws://' + window.location.hostname + '/ws';
+let gateway = `ws://${window.location.hostname}/ws`;
 let websocket;
 
+window.addEventListener('load', () => {
+    initWebSocket();
+});
+
 function initWebSocket() {
-  console.log('Trying to open a WebSocket connection...');
-  websocket = new WebSocket(gateway);
-  websocket.onopen    = onOpen;
-  websocket.onclose   = onClose;
-  websocket.onmessage = onMessage;
-}
-
-function onOpen(event) {
-  console.log('Connection opened');
-  document.getElementById('messages').innerHTML = "Connected";
-}
-
-function onClose(event) {
-  console.log('Connection closed');
-  document.getElementById('messages').innerHTML = "Connection closed";
-  setTimeout(initWebSocket, 2000);
+    websocket = new WebSocket(gateway);
+    websocket.onopen = () => console.log("WS connecté");
+    websocket.onclose = () => setTimeout(initWebSocket, 2000);
+    websocket.onmessage = onMessage;
 }
 
 function onMessage(event) {
-  console.log("WS:", event.data);
+    const data = JSON.parse(event.data);
 
-  let data = JSON.parse(event.data);
+    // --- États simples ---
+    document.getElementById("wifi_on").checked = data.wifi_on;
+    document.getElementById("discovery_on").checked = data.discovery_on;
+    document.getElementById("track_profile").value = data.track_profile;
 
-  // --- États globaux ---
-  document.getElementById('wifi_on').checked      = data.wifi_on;
-  document.getElementById('discovery_on').checked = data.discovery_on;
+    // --- État CAN ---
+    const canBox = document.getElementById("can_status");
+    if (data.can_ok) {
+        canBox.style.color = "#22c55e";
+        canBox.innerText = `CAN OK (${data.can_last_ms} ms)`;
+    } else {
+        canBox.style.color = "#ef4444";
+        canBox.innerText = "CAN OFFLINE";
+    }
 
-  // --- État CAN ---
-  let canLed = document.getElementById('can_status');
-  if (data.can_ok) {
-    canLed.style.backgroundColor = "green";
-    canLed.innerHTML = "CAN OK (" + data.can_last_ms + " ms)";
-  } else {
-    canLed.style.backgroundColor = "red";
-    canLed.innerHTML = "CAN OFF (" + data.can_last_ms + " ms)";
-  }
+    // --- Liste des satellites ---
+    let html = "";
+    data.sats.forEach(s => {
+        html += `<div class="sat-item">
+                    <b>ID ${s.id}</b> —
+                    <span class="${s.online ? 'sat-online' : 'sat-offline'}">
+                        ${s.online ? 'ONLINE' : 'OFFLINE'}
+                    </span>
+                 </div>`;
+    });
+    document.getElementById("sat_list").innerHTML = html;
 
-  // --- Liste des satellites ---
-  let satDiv = document.getElementById('sat_list');
-  satDiv.innerHTML = ""; // reset
+    // --- 🟥🟩 État STOP / CLEAR STOP (automatique) ---
+    if (data.stop_state !== undefined) {
+        const box = document.getElementById("stop_state");
 
-  data.sats.forEach(s => {
-    let color = s.online ? "green" : "red";
-    satDiv.innerHTML += `
-      <div style="padding:4px; margin:3px; border:1px solid #ccc;">
-        <b>Satellite ${s.id}</b> :
-        <span style="color:${color}; font-weight:bold;">
-          ${s.online ? "ONLINE" : "OFFLINE"}
-        </span>
-        <br>
-        lastSeen = ${s.lastSeen} ms
-      </div>
-    `;
-  });
+        if (data.stop_state === 1) {
+            box.innerText = "État : STOP actif";
+            box.className = "status stop-active";
+        } else {
+            box.innerText = "État : fonctionnement normal";
+            box.className = "status stop-clear";
+        }
+    }
+
+    // --- 💾 État SAUVEGARDE (automatique) ---
+    if (data.save_state !== undefined) {
+        const box = document.getElementById("save_state");
+
+        if (data.save_state === 0) {
+            box.innerText = "Sauvegarde : en attente";
+            box.className = "status";
+        }
+        if (data.save_state === 1) {
+            box.innerText = "Sauvegarde : OK";
+            box.className = "status state-ok";
+        }
+        if (data.save_state === 2) {
+            box.innerText = "Sauvegarde : erreur";
+            box.className = "status state-error";
+        }
+    }
+
+    // --- 🔄 État REDÉMARRAGE (automatique) ---
+    if (data.restart_state !== undefined) {
+        const box = document.getElementById("restart_state");
+
+        if (data.restart_state === 0) {
+            box.innerText = "Redémarrage : en attente";
+            box.className = "status";
+        }
+        if (data.restart_state === 1) {
+            box.innerText = "Redémarrage : OK";
+            box.className = "status state-ok";
+        }
+        if (data.restart_state === 2) {
+            box.innerText = "Redémarrage : erreur";
+            box.className = "status state-error";
+        }
+    }
 }
 
-window.addEventListener('load', () => {
-  initWebSocket();
-});
+/* ============================================================
+   COMMANDES WEB
+   ============================================================ */
 
-// --- Commandes envoyées au serveur ---
-function wifi_on(obj) {
-  websocket.send(JSON.stringify({ wifi_on: obj.checked }));
+function wifi_on(el) {
+    websocket.send(JSON.stringify({ wifi_on: el.checked }));
 }
 
-function discovery_on(obj) {
-  websocket.send(JSON.stringify({ discovery_on: obj.checked }));
+function discovery_on(el) {
+    websocket.send(JSON.stringify({ discovery_on: el.checked }));
 }
 
-function restartEsp() {
-  websocket.send(JSON.stringify({ restartEsp: true }));
+function set_profile() {
+    const v = Number(document.getElementById("track_profile").value);
+    websocket.send(JSON.stringify({ set_profile: true, value: v }));
 }
 
+/* ============================================================
+   💾 SAUVEGARDE
+   ============================================================ */
 function save() {
-  websocket.send(JSON.stringify({ save: true }));
+    websocket.send(JSON.stringify({ save: true }));
+
+    const box = document.getElementById("save_state");
+    box.innerText = "Sauvegarde : en cours…";
+    box.className = "status state-working";
+
+    console.log("Sauvegarde envoyée");
+}
+
+/* ============================================================
+   🔄 REDÉMARRAGE
+   ============================================================ */
+function restartEsp() {
+    websocket.send(JSON.stringify({ restartEsp: true }));
+
+    const box = document.getElementById("restart_state");
+    box.innerText = "Redémarrage : en cours…";
+    box.className = "status state-working";
+
+    console.log("Redémarrage envoyé");
+}
+
+/* ============================================================
+   🟥 STOP GLOBAL (0x201)
+   ============================================================ */
+function send_stop() {
+    websocket.send(JSON.stringify({ stop: true }));
+
+    const box = document.getElementById("stop_state");
+    box.innerText = "État : STOP actif";
+    box.className = "status stop-active";
+
+    console.log("STOP global envoyé");
+}
+
+/* ============================================================
+   🟩 CLEAR STOP GLOBAL (0x202)
+   ============================================================ */
+function send_clear_stop() {
+    websocket.send(JSON.stringify({ clear_stop: true }));
+
+    const box = document.getElementById("stop_state");
+    box.innerText = "État : fonctionnement normal";
+    box.className = "status stop-clear";
+
+    console.log("CLEAR STOP envoyé");
 }

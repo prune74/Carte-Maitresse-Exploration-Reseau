@@ -2,38 +2,9 @@
 DiscoveryMaster_Config.h
 
 🎯 Rôle
-Fichier de configuration global du module DiscoveryMaster.
-Il regroupe les constantes système, les définitions du protocole Discovery
-et les options de compilation nécessaires au fonctionnement du réseau Discovery 2026.
-
-📌 Contenu
-- Informations projet :
-    • PROJECT  → nom du firmware
-    • VERSION  → version logicielle
-
-- Constantes système :
-    • NO_ID, NO_PIN → valeurs par défaut
-    • NB_SAT        → nombre maximum de satellites Discovery
-
-- Options de debug :
-    • DEBUG
-    • alias debug → Serial
-
-- Configuration WiFi :
-    • Activation du mode AP si WIFI_AP_MODE est défini
-    • Sinon, fonctionnement en mode STA (client WiFi)
-    • Les identifiants WiFi (SSID / mot de passe) sont chargés depuis settings.json
-
-- Protocole Discovery :
-    • IDs CAN
-    • commandes
-    • masques et filtres
-
-📌 Particularités
-- Ce fichier est inclus dans la majorité des modules DiscoveryMaster
-  (WiFi, WebHandler, CanService, Settings, SatManager, etc.).
-- Les paramètres dynamiques (WiFi, Discovery, credentials) sont désormais
-  stockés dans settings.json et gérés par DiscoveryMaster_Settings.
+Configuration locale du DiscoveryMaster.
+Ne contient PAS le protocole Discovery 2026.
+Toutes les commandes CAN / PROTO_xx sont dans Discovery_Protocol.h.
 */
 
 #pragma once
@@ -53,20 +24,22 @@ et les options de compilation nécessaires au fonctionnement du réseau Discover
 #define NO_PIN 255
 #define NB_SAT 30
 
-/* ----- WiFi : Mode AP (optionnel) -----
-   Décommentez la ligne ci-dessous pour forcer le mode AP.
-   Si WIFI_AP_MODE n'est PAS défini :
-       → la carte démarre en mode STA (client WiFi)
-       → SSID / mot de passe chargés depuis settings.json
-*/
+/* ----- WiFi : Mode AP (optionnel) ----- */
 //#define WIFI_AP_MODE
 
-/* ---------------------------------------------------------------------------
-   Protocole Discovery 2026 : IDs CAN
-   --------------------------------------------------------------------------- */
+/* ============================================================
+ *  🟥 DISCOVERY CAN 11 bits — Messages globaux Master ↔ SA
+ * ============================================================
+ *
+ *  Ces IDs ne suivent PAS le format 29 bits Märklin.
+ *  Ils sont utilisés pour la supervision globale.
+ */
 
-// Heartbeat envoyé par les satellites
-#define DISCOVERY_CAN_ID_HEARTBEAT       0x200
+/* Heartbeat SA → Master */
+#define DISCOVERY_CAN_ID_HEARTBEAT          0x200  // DLC=2 : [ID_H][ID_L]
 
-// STOP d’urgence envoyé par le Watchdog
-#define DISCOVERY_CAN_ID_EMERGENCY_STOP  0x201
+/* STOP global Master → SA (puis SA → EXSA via RS485) */
+#define DISCOVERY_CAN_ID_EMERGENCY_STOP     0x201  // DLC=0 : STOP global
+
+/* CLEAR STOP global Master → SA */
+#define DISCOVERY_CAN_ID_CLEAR_STOP         0x202  // DLC=0 : levée STOP global
