@@ -2,7 +2,7 @@
   "idNode": 1,
   "discovery_on": true,
   "wifi_on": true,
-  "wifi_ssid": "Bbox-E51CC95D",
-  "wifi_psw": "53DA477752646293F62EEEDD9F21D2",
+  "wifi_ssid": "Ssid",
+  "wifi_psw": "Password",
   "track_profile": 0
 }
