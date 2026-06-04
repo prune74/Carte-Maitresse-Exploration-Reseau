@@ -24,8 +24,7 @@ static String input;
 // ---------------------------------------------------------------------------
 // Définition d’un handler de commande
 // ---------------------------------------------------------------------------
-struct CliCommand
-{
+struct CliCommand {
     const char *name;
     void (*handler)(const String &args);
 };
@@ -33,29 +32,30 @@ struct CliCommand
 // ---------------------------------------------------------------------------
 // Handlers des commandes
 // ---------------------------------------------------------------------------
-void cmd_stats(const String &)
-{
+void cmd_stats(const String &) {
     uint32_t b0, b1, co, bad;
     DccDecoder_getStats(b0, b1, co, bad);
-    Serial.printf("STATS: b0=%lu b1=%lu cutout=%lu bad=%lu\n",
-                  b0, b1, co, bad);
+
+    Serial.printf(
+        "STATS: b0=%lu b1=%lu cutout=%lu bad=%lu\n",
+        b0, b1, co, bad
+    );
 }
 
-void cmd_reset(const String &)
-{
+void cmd_reset(const String &) {
     Serial.println("Resetting ESP32...");
     delay(100);
     ESP.restart();
 }
 
-void cmd_debug_on(const String &)
-{
+void cmd_debug_on(const String &) {
     Serial.println("Debug ON");
+    // TODO: activer un flag global si nécessaire
 }
 
-void cmd_debug_off(const String &)
-{
+void cmd_debug_off(const String &) {
     Serial.println("Debug OFF");
+    // TODO: désactiver un flag global si nécessaire
 }
 
 // ---------------------------------------------------------------------------
@@ -71,12 +71,9 @@ static const CliCommand commands[] = {
 // ---------------------------------------------------------------------------
 // Dispatcher : recherche la commande et appelle son handler
 // ---------------------------------------------------------------------------
-static bool Cli_dispatch(const String &cmd)
-{
-    for (auto &c : commands)
-    {
-        if (cmd.startsWith(c.name))
-        {
+static bool Cli_dispatch(const String &cmd) {
+    for (auto &c : commands) {
+        if (cmd.startsWith(c.name)) {
             String args = cmd.substring(strlen(c.name));
             args.trim();
             c.handler(args);
@@ -89,22 +86,18 @@ static bool Cli_dispatch(const String &cmd)
 // ---------------------------------------------------------------------------
 // Initialisation
 // ---------------------------------------------------------------------------
-void Cli_begin()
-{
+void Cli_begin() {
     input.reserve(64);
 }
 
 // ---------------------------------------------------------------------------
 // Boucle CLI
 // ---------------------------------------------------------------------------
-void Cli_task()
-{
-    while (Serial.available())
-    {
+void Cli_task() {
+    while (Serial.available()) {
         char c = Serial.read();
 
-        if (c == '\n' || c == '\r')
-        {
+        if (c == '\n' || c == '\r') {
             if (input.length() == 0)
                 return;
 
@@ -112,8 +105,7 @@ void Cli_task()
             input = "";
             cmd.trim();
 
-            if (!Cli_dispatch(cmd))
-            {
+            if (!Cli_dispatch(cmd)) {
                 Serial.printf("Unknown command: %s\n", cmd.c_str());
             }
 

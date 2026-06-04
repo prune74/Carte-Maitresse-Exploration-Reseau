@@ -37,15 +37,19 @@ entre le décodage temps réel du signal DCC et les autres tâches du système.
 
 void taskDcc(void *pv)
 {
+    (void)pv; // éviter un warning si pv n'est pas utilisé
+
     DccEvent ev;
 
     for (;;)
     {
+        // Lire un événement DCC si disponible
         if (DccDecoder_getEvent(ev))
         {
             BoosterState_updateFromDcc(ev);
         }
 
+        // Cadence fixe 1 ms
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 }

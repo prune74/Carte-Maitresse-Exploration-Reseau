@@ -47,7 +47,9 @@ temps réel internes.
 void setup()
 {
     Serial.begin(115200);
-    delay(200);
+    
+    for (int i = 0; i < 20; i++)
+    vTaskDelay(pdMS_TO_TICKS(10));
 
     DiscoveryMaster_setup();
     Booster_setup();

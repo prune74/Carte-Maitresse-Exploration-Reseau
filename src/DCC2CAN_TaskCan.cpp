@@ -33,9 +33,11 @@ Cette tâche constitue le lien entre le décodeur DCC et le bus CAN Booster.
 
 void taskCan(void *pv)
 {
+    (void)pv; // évite un warning si pv n'est pas utilisé
+
     for (;;)
     {
-        BoosterState_sendCan();
-        vTaskDelay(pdMS_TO_TICKS(2));
+        BoosterState_sendCan();          // envoi du bit DCC courant
+        vTaskDelay(pdMS_TO_TICKS(2));    // cadence fixe 2 ms
     }
 }

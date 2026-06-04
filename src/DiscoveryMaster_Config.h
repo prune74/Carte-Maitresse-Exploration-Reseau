@@ -36,10 +36,10 @@ Toutes les commandes CAN / PROTO_xx sont dans Discovery_Protocol.h.
  */
 
 /* Heartbeat SA → Master */
-#define DISCOVERY_CAN_ID_HEARTBEAT          0x200  // DLC=2 : [ID_H][ID_L]
+#define PROTOCOLCAN_ID_HEARTBEAT          0x200  // DLC=2 : [ID_H][ID_L]
 
 /* STOP global Master → SA (puis SA → EXSA via RS485) */
-#define DISCOVERY_CAN_ID_EMERGENCY_STOP     0x201  // DLC=0 : STOP global
+#define PROTOCOLCAN_ID_STOP               0x201  // DLC=0 : STOP global
 
 /* CLEAR STOP global Master → SA */
-#define DISCOVERY_CAN_ID_CLEAR_STOP         0x202  // DLC=0 : levée STOP global
+#define PROTOCOLCAN_ID_CLEAR_STOP         0x202  // DLC=0 : levée STOP global

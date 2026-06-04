@@ -32,9 +32,11 @@ supervision (RUNNING, DCC_LOST, RECOVERY) via BoosterState_supervise().
 
 void taskSupervision(void *pv)
 {
+    (void)pv; // éviter un warning éventuel
+
     for (;;)
     {
         BoosterState_supervise();
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(20));  // 20 ms = supervision rapide et légère
     }
 }

@@ -12,6 +12,7 @@ temps réel du signal DCC et à son émission sur le bus CAN Booster.
     • Initialise le décodeur DCC (ISR + file d’événements)
     • Initialise le driver CAN Booster (émission uniquement)
     • Initialise le CLI série
+    • Initialise la pile CAN via CanUniversal (CAN0 = ESP32 interne)
     • Crée les tâches FreeRTOS :
         - taskDcc        → traitement des événements DCC
         - taskCan        → envoi des trames CAN Booster
@@ -39,22 +40,40 @@ temps réel du signal DCC et à son émission sur le bus CAN Booster.
 */
 
 #include "DCC2CAN_main.h"
+#include "CanUniversal/CanInit.h"
+#include "CanUniversal/CanBus.h"
+#include "CanUniversal/CanMsg.h"
 
 void Booster_setup()
 {
+    // -------------------------------------------------------------------------
     // Gestion d’état
+    // -------------------------------------------------------------------------
     BoosterState_init();
 
-    // Décodeur DCC
+    // -------------------------------------------------------------------------
+    // Décodeur DCC (ISR + file d’événements)
+    // -------------------------------------------------------------------------
     DccDecoder_begin();
 
+    // -------------------------------------------------------------------------
+    // Initialisation CAN (CAN0 via CanUniversal)
+    // -------------------------------------------------------------------------
+    CanUniversal_begin();
+
+    // -------------------------------------------------------------------------
     // Driver CAN Booster (TX only)
+    // -------------------------------------------------------------------------
     CanBooster_begin();
 
+    // -------------------------------------------------------------------------
     // CLI série
+    // -------------------------------------------------------------------------
     Cli_begin();
 
+    // -------------------------------------------------------------------------
     // Tâches FreeRTOS
+    // -------------------------------------------------------------------------
     xTaskCreate(taskDcc,        "DCC", 4096, NULL, 3, NULL);
     xTaskCreate(taskCan,        "CAN", 4096, NULL, 3, NULL);
     xTaskCreate(taskSupervision,"SUP", 2048, NULL, 1, NULL);

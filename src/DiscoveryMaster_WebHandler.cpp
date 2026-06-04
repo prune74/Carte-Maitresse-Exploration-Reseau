@@ -41,15 +41,15 @@ void DiscoveryMaster_WebHandler::pushStatus()
     StaticJsonDocument<1024> doc;
 
     // --- État global ---
-    doc["wifi_on"]      = DiscoveryMaster_Settings::WIFI_ON;
+    doc["wifi_on"] = DiscoveryMaster_Settings::WIFI_ON;
     doc["discovery_on"] = DiscoveryMaster_Settings::DISCOVERY_ON;
 
     // 🔥 Profil voie (N / HO)
     doc["track_profile"] = DiscoveryMaster_Settings::track_profile;
 
     // --- État CAN (supervision) ---
-    doc["can_ok"]       = canService.isCanOK();
-    doc["can_last_ms"]  = canService.lastRxAgeMs();
+    doc["can_ok"] = canService.isCanOK();
+    doc["can_last_ms"] = canService.lastRxAgeMs();
 
     // --- Liste des satellites ---
     JsonArray satsJson = doc.createNestedArray("sats");
@@ -61,8 +61,8 @@ void DiscoveryMaster_WebHandler::pushStatus()
         if (s.id != NO_ID)
         {
             JsonObject o = satsJson.createNestedObject();
-            o["id"]       = s.id;
-            o["online"]   = s.online;
+            o["id"] = s.id;
+            o["online"] = s.online;
             o["lastSeen"] = s.lastSeen;
         }
     }
@@ -173,32 +173,33 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
         }
 
         // -------------------------------------------------------------------
-        // 🟥 STOP GLOBAL (0x201)
-        // -------------------------------------------------------------------
-        if (message.indexOf("stop") >= 0)
-        {
-            CANMessage msg;
-            msg.id  = DISCOVERY_CAN_ID_EMERGENCY_STOP; // 0x201
-            msg.ext = false;
-            msg.len = 0;
-
-            _can->sendMessage(msg);
-            Serial.println("[WEB] STOP global envoyé !");
-        }
-
-        // -------------------------------------------------------------------
         // 🟩 CLEAR STOP GLOBAL (0x202)
         // -------------------------------------------------------------------
         if (message.indexOf("clear_stop") >= 0)
         {
             CANMessage msg;
-            msg.id  = DISCOVERY_CAN_ID_CLEAR_STOP; // 0x202
+            msg.id = PROTOCOLCAN_ID_CLEAR_STOP; // 0x202
             msg.ext = false;
             msg.len = 0;
 
             _can->sendMessage(msg);
             Serial.println("[WEB] CLEAR STOP envoyé !");
         }
+
+        // -------------------------------------------------------------------
+        // 🟥 STOP GLOBAL (0x201)
+        // -------------------------------------------------------------------
+        else if (message.indexOf("stop") >= 0)
+        {
+            CANMessage msg;
+            msg.id = PROTOCOLCAN_ID_STOP; // 0x201
+            msg.ext = false;
+            msg.len = 0;
+
+            _can->sendMessage(msg);
+            Serial.println("[WEB] STOP global envoyé !");
+        }
+    
     }
     break;
     }

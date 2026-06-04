@@ -31,53 +31,59 @@ des événements envoyés aux tâches FreeRTOS du Booster via une queue.
     • Cutout = absence prolongée de fronts
 - Fonctionne indépendamment du CAN Discovery : il alimente uniquement le
   module Booster via les tâches FreeRTOS.
-
 */
 
 #include "DCC2CAN_DccDecoder.h"
 
+// ---------------------------------------------------------------------------
+// Variables internes
+// ---------------------------------------------------------------------------
 static volatile uint32_t lastEdge = 0;
 static volatile uint8_t currentPhase = 0;
 static volatile bool inCutout = false;
 
 static QueueHandle_t dccQueue = nullptr;
 
-// Stats
+// ---------------------------------------------------------------------------
+// Statistiques (optionnelles)
+// ---------------------------------------------------------------------------
 #if DCCB_MEASURE_STATS
-static volatile uint32_t s_bit0Count = 0;
-static volatile uint32_t s_bit1Count = 0;
+static volatile uint32_t s_bit0Count   = 0;
+static volatile uint32_t s_bit1Count   = 0;
 static volatile uint32_t s_cutoutCount = 0;
-static volatile uint32_t s_badTiming = 0;
+static volatile uint32_t s_badTiming   = 0;
 #endif
 
-static void IRAM_ATTR sendEventFromISR(const DccEvent &ev)
-{
+// ---------------------------------------------------------------------------
+// Envoi d’un événement depuis l’ISR
+// ---------------------------------------------------------------------------
+static void IRAM_ATTR sendEventFromISR(const DccEvent &ev) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xQueueSendFromISR(dccQueue, (void *)&ev, &xHigherPriorityTaskWoken);
-    if (xHigherPriorityTaskWoken == pdTRUE)
-    {
+
+    if (xHigherPriorityTaskWoken == pdTRUE) {
         portYIELD_FROM_ISR();
     }
 }
 
-static void IRAM_ATTR dccISR()
-{
+// ---------------------------------------------------------------------------
+// ISR DCC : appelée sur chaque front
+// ---------------------------------------------------------------------------
+static void IRAM_ATTR dccISR() {
     uint32_t now = micros();
-    uint32_t dt = now - lastEdge;
+    uint32_t dt  = now - lastEdge;
     lastEdge = now;
 
     DccEvent ev;
     ev.dt_us = dt;
     ev.phase = currentPhase;
-    ev.bit = 0;
+    ev.bit   = 0;
 
     // -----------------------------------------------------------------------
-    // Début de cutout : gros trou
+    // Début de cutout
     // -----------------------------------------------------------------------
-    if (dt > DCCB_TIMING_CUTOUT_START_US)
-    {
-        if (!inCutout)
-        {
+    if (dt > DCCB_TIMING_CUTOUT_START_US) {
+        if (!inCutout) {
             inCutout = true;
 #if DCCB_MEASURE_STATS
             s_cutoutCount++;
@@ -89,24 +95,22 @@ static void IRAM_ATTR dccISR()
     }
 
     // -----------------------------------------------------------------------
-    // Fin de cutout : retour à un front normal
+    // Fin de cutout
     // -----------------------------------------------------------------------
-    if (inCutout)
-    {
+    if (inCutout) {
         inCutout = false;
         ev.type = DCC_EVT_CUTOUT_END;
         sendEventFromISR(ev);
-        return;  // CRITICAL FIX: Don't process as bit immediately after cutout ends
+        return; // IMPORTANT : ne pas traiter comme un bit
     }
 
     // -----------------------------------------------------------------------
     // Bit 1
     // -----------------------------------------------------------------------
-    if (dt >= DCCB_TIMING_BIT1_MIN_US && dt <= DCCB_TIMING_BIT1_MAX_US)
-    {
+    if (dt >= DCCB_TIMING_BIT1_MIN_US && dt <= DCCB_TIMING_BIT1_MAX_US) {
         currentPhase ^= 1;
         ev.type = DCC_EVT_BIT;
-        ev.bit = 1;
+        ev.bit  = 1;
         ev.phase = currentPhase;
 #if DCCB_MEASURE_STATS
         s_bit1Count++;
@@ -118,11 +122,10 @@ static void IRAM_ATTR dccISR()
     // -----------------------------------------------------------------------
     // Bit 0
     // -----------------------------------------------------------------------
-    if (dt >= DCCB_TIMING_BIT0_MIN_US && dt <= DCCB_TIMING_BIT0_MAX_US)
-    {
+    if (dt >= DCCB_TIMING_BIT0_MIN_US && dt <= DCCB_TIMING_BIT0_MAX_US) {
         currentPhase ^= 1;
         ev.type = DCC_EVT_BIT;
-        ev.bit = 0;
+        ev.bit  = 0;
         ev.phase = currentPhase;
 #if DCCB_MEASURE_STATS
         s_bit0Count++;
@@ -139,29 +142,36 @@ static void IRAM_ATTR dccISR()
 #endif
 }
 
-void DccDecoder_begin()
-{
+// ---------------------------------------------------------------------------
+// Initialisation du décodeur
+// ---------------------------------------------------------------------------
+void DccDecoder_begin() {
     dccQueue = xQueueCreate(DCC_EVENT_QUEUE_SIZE, sizeof(DccEvent));
 
     pinMode(PIN_DCC_IN, INPUT);
     attachInterrupt(digitalPinToInterrupt(PIN_DCC_IN), dccISR, CHANGE);
 }
 
-bool DccDecoder_getEvent(DccEvent &ev)
-{
+// ---------------------------------------------------------------------------
+// Lecture d’un événement
+// ---------------------------------------------------------------------------
+bool DccDecoder_getEvent(DccEvent &ev) {
     if (dccQueue == nullptr)
         return false;
+
     return xQueueReceive(dccQueue, &ev, 0) == pdTRUE;
 }
 
+// ---------------------------------------------------------------------------
+// Lecture des statistiques
+// ---------------------------------------------------------------------------
 void DccDecoder_getStats(uint32_t &bit0Count, uint32_t &bit1Count,
-                         uint32_t &cutoutCount, uint32_t &badTiming)
-{
+                         uint32_t &cutoutCount, uint32_t &badTiming) {
 #if DCCB_MEASURE_STATS
-    bit0Count = s_bit0Count;
-    bit1Count = s_bit1Count;
+    bit0Count   = s_bit0Count;
+    bit1Count   = s_bit1Count;
     cutoutCount = s_cutoutCount;
-    badTiming = s_badTiming;
+    badTiming   = s_badTiming;
 #else
     bit0Count = bit1Count = cutoutCount = badTiming = 0;
 #endif

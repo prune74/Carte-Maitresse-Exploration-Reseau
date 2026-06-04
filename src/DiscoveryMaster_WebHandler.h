@@ -5,6 +5,7 @@
 #include "DiscoveryMaster_CanService.h"
 #include "DiscoveryMaster_Settings.h"
 #include "DiscoveryMaster_SatManager.h"
+#include "DiscoveryMaster_Config.h"
 
 class DiscoveryMaster_WebHandler
 {

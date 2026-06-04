@@ -146,7 +146,7 @@ Bits:  28-25   |   24-17      |      16            |   15-0
 
 **CAN Messages:**
 - `DISCOVERY_CAN_ID_HEARTBEAT` Heartbeat IN (from satellites)
-- `DISCOVERY_CAN_ID_EMERGENCY_STOP` Emergency Stop OUT (to satellites)
+- `PROTOCOLCAN_ID_STOP` Emergency Stop OUT (to satellites)
 
 ---
 

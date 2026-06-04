@@ -22,6 +22,7 @@
 #include "DiscoveryMaster_Pins.h"
 #include "DiscoveryMaster_CanService.h"
 #include "Discovery_Protocol.h"
+#include "DiscoveryMaster_Config.h"
 
 extern DiscoveryMaster_CanService canService;
 
@@ -56,7 +57,7 @@ void DiscoveryMaster_InputService::loop()
         {
             // Construction de la trame CLEAR STOP (0x202)
             CANMessage msg;
-            msg.id  = DISCOVERY_CAN_ID_CLEAR_STOP; // 0x202
+            msg.id  = PROTOCOLCAN_ID_CLEAR_STOP;   // 0x202
             msg.ext = false;                       // 11 bits
             msg.len = 0;                           // aucune data
 
