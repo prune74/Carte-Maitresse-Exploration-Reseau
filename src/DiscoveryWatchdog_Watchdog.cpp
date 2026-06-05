@@ -23,8 +23,8 @@ devient silencieux.
 #include "DiscoveryWatchdog_Watchdog.h"
 #include "DiscoveryMaster_SatManager.h"
 #include "DiscoveryMaster_CanService.h"
-#include "ProtocolCAN.h"          // <-- nécessaire pour PROTOCOLCAN_ID_STOP
-#include "CanUniversal/CanMsg.h"  // <-- nécessaire pour CanMsg
+#include "ProtocolCAN.h" // <-- nécessaire pour PROTOCOLCAN_ID_STOP
+#include "CanMsg.h"      // <-- nécessaire pour CanMsg
 
 extern DiscoveryMaster_SatManager satManager;
 extern DiscoveryMaster_CanService canService;
@@ -51,7 +51,7 @@ void DiscoveryWatchdog_registerHeartbeat(uint16_t satId)
 void DiscoveryWatchdog_triggerEmergencyStop()
 {
     // Construction d’une trame 11 bits STOP global
-    CanMsg msg(uint16_t(PROTOCOLCAN_ID_STOP), {});  // ID = 0x201, DLC = 0
+    CanMsg msg(uint16_t(PROTOCOLCAN_ID_STOP), {}); // ID = 0x201, DLC = 0
 
     canService.sendMessage(msg);
     Serial.println("[WD] STOP global envoyé !");

@@ -1,8 +1,9 @@
 #pragma once
-#include "CanUniversal/CanMsg.h"
-#include "CanUniversal/CanBus.h"
+#include "CanMsg.h"
+#include "CanBus.h"
 
-class DiscoveryMaster_CanService {
+class DiscoveryMaster_CanService
+{
 public:
     DiscoveryMaster_CanService();
 

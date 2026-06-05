@@ -21,13 +21,13 @@ des satellites, et de mettre à jour SatManager via le Watchdog.
 #include "DiscoveryWatchdog_Watchdog.h"
 #include "DiscoveryMaster_CanService.h"
 #include "ProtocolCAN.h"
-#include "CanUniversal/CanMsg.h"
+#include "CanMsg.h"
 
 extern DiscoveryMaster_CanService canService;
 
 void DiscoveryWatchdog_TaskRx(void *pv)
 {
-    CanMsg msg;   // <-- Remplace CANMessage
+    CanMsg msg; // <-- Remplace CANMessage
 
     for (;;)
     {
@@ -38,8 +38,7 @@ void DiscoveryWatchdog_TaskRx(void *pv)
             if (ProtocolCAN::isHeartbeat(msg.id))
             {
                 // ID satellite codé sur 2 octets
-                uint16_t satId = (uint16_t(msg.data[0]) << 8)
-                               | uint16_t(msg.data[1]);
+                uint16_t satId = (uint16_t(msg.data[0]) << 8) | uint16_t(msg.data[1]);
 
                 // Mise à jour du Watchdog (SatManager)
                 DiscoveryWatchdog_registerHeartbeat(satId);

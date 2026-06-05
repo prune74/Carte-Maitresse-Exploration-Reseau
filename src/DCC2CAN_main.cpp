@@ -40,9 +40,10 @@ temps réel du signal DCC et à son émission sur le bus CAN Booster.
 */
 
 #include "DCC2CAN_main.h"
-#include "CanUniversal/CanInit.h"
-#include "CanUniversal/CanBus.h"
-#include "CanUniversal/CanMsg.h"
+#include "CanInit.h"
+#include "CanBus.h"
+#include "CanMsg.h"
+#include "DCC2CAN_CanConfig.h"
 
 void Booster_setup()
 {
@@ -59,7 +60,7 @@ void Booster_setup()
     // -------------------------------------------------------------------------
     // Initialisation CAN (CAN0 via CanUniversal)
     // -------------------------------------------------------------------------
-    CanUniversal_begin();
+    CanInit::begin(DCC2CAN_CONFIG);
 
     // -------------------------------------------------------------------------
     // Driver CAN Booster (TX only)
@@ -74,9 +75,9 @@ void Booster_setup()
     // -------------------------------------------------------------------------
     // Tâches FreeRTOS
     // -------------------------------------------------------------------------
-    xTaskCreate(taskDcc,        "DCC", 4096, NULL, 3, NULL);
-    xTaskCreate(taskCan,        "CAN", 4096, NULL, 3, NULL);
-    xTaskCreate(taskSupervision,"SUP", 2048, NULL, 1, NULL);
+    xTaskCreate(taskDcc, "DCC", 4096, NULL, 3, NULL);
+    xTaskCreate(taskCan, "CAN", 4096, NULL, 3, NULL);
+    xTaskCreate(taskSupervision, "SUP", 2048, NULL, 1, NULL);
 }
 
 void Booster_loop()
