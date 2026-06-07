@@ -4,23 +4,33 @@
 #include "DCC2CAN_FakeDcc.h"
 #include "Debug.h"
 
+extern bool g_isTestMode;
+
 void taskDcc(void *pv)
 {
     (void)pv;
 
     LOG_INFO("Tâche DCC démarrée → cadence 1 ms");
 
-    // 🔥 initialiser FakeDCC
-    FakeDcc_begin();
-    LOG_INFO("FakeDCC → initialisé dans taskDcc");
+    if (g_isTestMode)
+    {
+        FakeDcc_begin();
+        LOG_INFO("FakeDCC → initialisé (mode test)");
+    }
+    else
+    {
+        LOG_INFO("DCC réel → ISR active (mode réel)");
+    }
 
     DccEvent ev;
 
     for (;;)
     {
-        // 🔥 Simulation DCC
-        FakeDcc_tick();
-        LOG_VERBOSE("FakeDCC → tick dans taskDcc");
+        if (g_isTestMode)
+        {
+            FakeDcc_tick();
+            LOG_VERBOSE("FakeDCC → tick dans taskDcc");
+        }
 
         // Lecture d’un événement réel ou simulé
         if (DccDecoder_getEvent(ev))

@@ -35,7 +35,7 @@ temps réel du signal DCC et à son émission sur le bus CAN Booster.
 #include "CanBus.h"
 #include "CanMsg.h"
 #include "DCC2CAN_FakeDcc.h"
-#include "Debug.h"   // 🔥 Ajout du système de logs
+#include "Debug.h"
 
 
 void Booster_setup()

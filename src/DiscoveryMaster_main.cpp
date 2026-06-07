@@ -53,6 +53,7 @@ void DiscoveryMaster_setup()
     CanInit::begin(MASTER_CAN_CONFIG);
     
     vTaskDelay(pdMS_TO_TICKS(5)); // Laisse TWAI sortir du RESET
+    /*
     CANMessage test;
     test.id = 0x123;
     test.len = 2;
@@ -65,7 +66,8 @@ void DiscoveryMaster_setup()
     CanMsg testMsg((uint16_t)0x123, {0xAA, 0xBB});
     bool okBus = CanBus::bus(0).send(testMsg);
     LOG_INFO("TEST CanUniversal → CanBus::bus(0).send() = %d", okBus);
-
+    */
+   
     // -----------------------------------------------------------------------
     // WIFI + WEB
     // -----------------------------------------------------------------------

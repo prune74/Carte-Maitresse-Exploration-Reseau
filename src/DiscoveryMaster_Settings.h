@@ -15,8 +15,11 @@ public:
     static String WIFI_SSID;
     static String WIFI_PSW;
 
-    // 🔥 Nouveau : profil voie (0 = N, 1 = HO)
+    // 🔥 Profil voie (0 = N, 1 = HO)
     static uint8_t track_profile;
+
+    // 🔥 Mode test (FakeDCC + CAN loopback)
+    static bool MODE_TEST;
 
     DiscoveryMaster_Settings() = delete;
 

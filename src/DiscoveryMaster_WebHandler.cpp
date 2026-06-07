@@ -4,6 +4,7 @@
 
 extern DiscoveryMaster_SatManager satManager;
 extern DiscoveryMaster_CanService canService;
+extern bool g_isTestMode; // 🔥 flag global
 
 // ---------------------------------------------------------------------------
 // CONSTRUCTEUR
@@ -21,7 +22,7 @@ void DiscoveryMaster_WebHandler::init(uint16_t webPort)
     LOG_INFO("WebHandler → initialisation (port %u)", webPort);
 
     _server = new AsyncWebServer(webPort);
-    _ws     = new AsyncWebSocket("/ws");
+    _ws = new AsyncWebSocket("/ws");
 
     _ws->onEvent(std::bind(&DiscoveryMaster_WebHandler::_WsEvent,
                            this,
@@ -53,12 +54,15 @@ void DiscoveryMaster_WebHandler::pushStatus()
     StaticJsonDocument<1024> doc;
 
     // --- État global ---
-    doc["wifi_on"]       = DiscoveryMaster_Settings::WIFI_ON;
-    doc["discovery_on"]  = DiscoveryMaster_Settings::DISCOVERY_ON;
+    doc["wifi_on"] = DiscoveryMaster_Settings::WIFI_ON;
+    doc["discovery_on"] = DiscoveryMaster_Settings::DISCOVERY_ON;
     doc["track_profile"] = DiscoveryMaster_Settings::track_profile;
 
+    // 🔥 Nouveau : mode test
+    doc["mode_test"] = DiscoveryMaster_Settings::MODE_TEST;
+
     // --- État CAN ---
-    doc["can_ok"]     = canService.isCanOK();
+    doc["can_ok"] = canService.isCanOK();
     doc["can_last_ms"] = canService.lastRxAgeMs();
 
     // --- Liste des satellites ---
@@ -71,8 +75,8 @@ void DiscoveryMaster_WebHandler::pushStatus()
         if (s.id != NO_ID)
         {
             JsonObject o = satsJson.createNestedObject();
-            o["id"]       = s.id;
-            o["online"]   = s.online;
+            o["id"] = s.id;
+            o["online"] = s.online;
             o["lastSeen"] = s.lastSeen;
         }
     }
@@ -164,6 +168,25 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
         }
 
         // -------------------------------------------------------------------
+        // MODE TEST (FakeDCC + CAN loopback)
+        // -------------------------------------------------------------------
+        if (message.indexOf("mode_test") >= 0)
+        {
+            bool on = doc["mode_test"].as<bool>();
+            LOG_WARN("[WEB] MODE_TEST = %s", on ? "true" : "false");
+
+            // Mise à jour du paramètre persistant
+            DiscoveryMaster_Settings::MODE_TEST = on;
+            DiscoveryMaster_Settings::writeFile();
+
+            // Mise à jour du flag global
+            g_isTestMode = on;
+
+            // Renvoi de l'état complet
+            pushStatus();
+        }
+
+        // -------------------------------------------------------------------
         // SAVE
         // -------------------------------------------------------------------
         if (message.indexOf("save") >= 0)
@@ -201,12 +224,11 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
         // -------------------------------------------------------------------
         if (message.indexOf("clear_stop") >= 0)
         {
-            CANMessage msg;
-            msg.id  = PROTOCOLCAN_ID_CLEAR_STOP;
-            msg.ext = false;
-            msg.len = 0;
-
+            CanMsg msg;
+            msg.id = PROTOCOLCAN_ID_CLEAR_STOP; // 0x202
+            msg.dlc = 0;
             _can->sendMessage(msg);
+
             LOG_INFO("[WEB] CLEAR STOP envoyé");
         }
 
@@ -215,12 +237,11 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
         // -------------------------------------------------------------------
         else if (message.indexOf("stop") >= 0)
         {
-            CANMessage msg;
-            msg.id  = PROTOCOLCAN_ID_STOP;
-            msg.ext = false;
-            msg.len = 0;
-
+            CanMsg msg;
+            msg.id = PROTOCOLCAN_ID_STOP; // 0x201
+            msg.dlc = 0;
             _can->sendMessage(msg);
+
             LOG_WARN("[WEB] STOP global envoyé");
         }
     }

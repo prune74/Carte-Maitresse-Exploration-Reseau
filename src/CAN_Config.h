@@ -35,6 +35,9 @@ public:
     uint8_t busCount() const override { return 2; }
 
     const CanBusConfig &bus(uint8_t index) const override {
+
+        extern bool g_isTestMode; // Indication du mode test (FakeDCC) pour activer le loopback sur CAN0
+
         static CanBusConfig cfg[2] = {
 
             // -----------------------------------------------------------------
@@ -55,7 +58,7 @@ public:
                 0,             // quartz
                 0,             // tolerance
 
-                true         // loopback
+                g_isTestMode   // loopback
             },
 
             // -----------------------------------------------------------------
@@ -76,7 +79,7 @@ public:
                 8000000,       // quartz
                 50,            // tolerance
 
-                false        // loopback
+                g_isTestMode   // loopback
             }
         };
 

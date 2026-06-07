@@ -11,6 +11,9 @@ String   DiscoveryMaster_Settings::WIFI_SSID      = "";
 String   DiscoveryMaster_Settings::WIFI_PSW       = "";
 uint8_t  DiscoveryMaster_Settings::track_profile  = 0;   // 0 = N, 1 = HO
 
+// 🔥 Nouveau : mode test (FakeDCC + CAN loopback)
+bool     DiscoveryMaster_Settings::MODE_TEST      = true;
+
 // ---------------------------------------------------------------------------
 // INITIALISATION SPIFFS
 // ---------------------------------------------------------------------------
@@ -57,6 +60,8 @@ void DiscoveryMaster_Settings::readFile()
 
     track_profile = doc["track_profile"] | 0;
 
+    MODE_TEST     = doc["mode_test"]     | true;
+
     LOG_INFO("Configuration chargée :");
     LOG_INFO(" - idNode        = %u", idNode);
     LOG_INFO(" - discovery_on  = %s", DISCOVERY_ON ? "true" : "false");
@@ -64,6 +69,7 @@ void DiscoveryMaster_Settings::readFile()
     LOG_INFO(" - wifi_ssid     = %s", WIFI_SSID.c_str());
     LOG_INFO(" - track_profile = %s",
              track_profile == 0 ? "N (12V)" : "HO (15V)");
+    LOG_INFO(" - mode_test     = %s", MODE_TEST ? "true" : "false");
 
     file.close();
 }
@@ -81,6 +87,7 @@ void DiscoveryMaster_Settings::writeFile()
     doc["wifi_ssid"]     = WIFI_SSID;
     doc["wifi_psw"]      = WIFI_PSW;
     doc["track_profile"] = track_profile;
+    doc["mode_test"]     = MODE_TEST;
 
     File file = SPIFFS.open("/settings.json", "w");
     if (!file)

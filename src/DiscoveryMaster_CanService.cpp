@@ -7,11 +7,11 @@
 #include "CanBus.h"
 #include "Debug.h"
 
-extern uint16_t idMain;
-extern DiscoveryMaster_SatManager satManager;
+extern uint16_t idMain;                         // ID du maître Discovery (254 par défaut)
+extern DiscoveryMaster_SatManager satManager;   // Gestionnaire de satellites
+extern bool g_isTestMode;                       // Indication du mode test (FakeDCC) pour activer le loopback
 
-// CAN1 = MCP2515 externe
-extern CanBus CAN[];
+extern CanBus CAN[];                            // CAN1 = MCP2515 externe
 
 // ---------------------------------------------------------------------------
 // CONSTRUCTEUR
@@ -159,6 +159,12 @@ void DiscoveryMaster_CanService::handleFrame(const CanMsg &msg)
 // ---------------------------------------------------------------------------
 bool DiscoveryMaster_CanService::sendFrame(const CanMsg &msg)
 {
+    // 🔥 MODE TEST → on n’envoie RIEN sur CAN1
+    if (g_isTestMode) {
+        LOG_VERBOSE("[TEST] CAN1 ignoré → ID=0x%X", msg.id);
+        return true; // On simule un succès pour éviter les warnings
+    }
+
     bool ok = CAN[1].send(msg);
 
     if (!ok)
@@ -170,7 +176,7 @@ bool DiscoveryMaster_CanService::sendFrame(const CanMsg &msg)
 }
 
 // ---------------------------------------------------------------------------
-// CMD_SAT_TEST_BUS
+// CMD_SAT_TEST_BUS (réponse à une demande de test de bus d’un satellite)
 // ---------------------------------------------------------------------------
 void DiscoveryMaster_CanService::handleCmdTestBus(uint16_t idExp, uint8_t priorite)
 {
@@ -188,7 +194,7 @@ void DiscoveryMaster_CanService::handleCmdTestBus(uint16_t idExp, uint8_t priori
 }
 
 // ---------------------------------------------------------------------------
-// CMD_SAT_REQUEST_ID
+// CMD_SAT_REQUEST_ID (réponse à une demande d’attribution d’ID d’un satellite)
 // ---------------------------------------------------------------------------
 void DiscoveryMaster_CanService::handleCmdRequestId(uint16_t idExp, uint8_t priorite)
 {
@@ -219,17 +225,23 @@ void DiscoveryMaster_CanService::handleCmdRequestId(uint16_t idExp, uint8_t prio
 }
 
 // ---------------------------------------------------------------------------
-// COMMANDES WEB
+// COMMANDES WEB 
 // ---------------------------------------------------------------------------
+
+// Ces fonctions sont appelées par le WebHandler lors de la réception de commandes HTTP depuis l’interface web. 
+// Elles construisent des messages CAN appropriés et les envoient aux satellites pour appliquer les changements demandés 
+// (ex : activer/désactiver le WiFi, changer le profil de voie, etc.).
 void DiscoveryMaster_CanService::sendWifiOnOff(bool on)
 {
     LOG_INFO("[WEB→CAN] WIFI_ON_OFF = %s", on ? "true" : "false");
 
     CanMsg msg = ProtocolCAN::makeMsg(
         2, CMD_WIFI_ON_OFF, false, idMain, {uint8_t(on ? 1 : 0)});
-    sendFrame(msg);
+    sendFrame(msg); 
 }
 
+// Cette fonction envoie une commande CAN pour activer ou désactiver le mode Discovery sur les satellites.
+// Elle est appelée lorsque l’utilisateur clique sur le bouton correspondant dans l’interface web.
 void DiscoveryMaster_CanService::sendDiscoveryOnOff(bool on)
 {
     LOG_INFO("[WEB→CAN] DISCOVERY_ON_OFF = %s", on ? "true" : "false");
@@ -239,6 +251,8 @@ void DiscoveryMaster_CanService::sendDiscoveryOnOff(bool on)
     sendFrame(msg);
 }
 
+// Cette fonction envoie une commande CAN pour demander à tous les satellites de sauvegarder leurs paramètres persistants (settings.json).
+// Elle est appelée lorsque l’utilisateur clique sur le bouton "Save All" dans l’interface web.
 void DiscoveryMaster_CanService::sendSaveAll()
 {
     LOG_INFO("[WEB→CAN] SAVE_ALL");
@@ -248,6 +262,8 @@ void DiscoveryMaster_CanService::sendSaveAll()
     sendFrame(msg);
 }
 
+// Cette fonction envoie une commande CAN pour demander à tous les satellites de redémarrer.
+// Elle est appelée lorsque l’utilisateur clique sur le bouton "Restart All" dans l’interface web.
 void DiscoveryMaster_CanService::sendRestartAll()
 {
     LOG_INFO("[WEB→CAN] RESTART_ALL");
@@ -257,6 +273,8 @@ void DiscoveryMaster_CanService::sendRestartAll()
     sendFrame(msg);
 }
 
+// Cette fonction envoie une commande CAN pour changer le profil de voie actif sur les satellites.
+// Elle est appelée lorsque l’utilisateur sélectionne un profil dans l’interface web.
 void DiscoveryMaster_CanService::sendTrackProfile(uint8_t profile)
 {
     LOG_INFO("[WEB→CAN] SET_PROFILE = %u", profile);

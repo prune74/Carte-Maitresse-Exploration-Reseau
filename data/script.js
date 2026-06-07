@@ -20,6 +20,11 @@ function onMessage(event) {
     document.getElementById("discovery_on").checked = data.discovery_on;
     document.getElementById("track_profile").value = data.track_profile;
 
+    // 🔥 Nouveau : Mode Test
+    if (data.mode_test !== undefined) {
+        document.getElementById("mode_test").checked = data.mode_test;
+    }
+
     // --- État CAN ---
     const canBox = document.getElementById("can_status");
     if (data.can_ok) {
@@ -42,7 +47,7 @@ function onMessage(event) {
     });
     document.getElementById("sat_list").innerHTML = html;
 
-    // --- 🟥🟩 État STOP / CLEAR STOP (automatique) ---
+    // --- 🟥🟩 État STOP / CLEAR STOP ---
     if (data.stop_state !== undefined) {
         const box = document.getElementById("stop_state");
 
@@ -55,7 +60,7 @@ function onMessage(event) {
         }
     }
 
-    // --- 💾 État SAUVEGARDE (automatique) ---
+    // --- 💾 État SAUVEGARDE ---
     if (data.save_state !== undefined) {
         const box = document.getElementById("save_state");
 
@@ -73,7 +78,7 @@ function onMessage(event) {
         }
     }
 
-    // --- 🔄 État REDÉMARRAGE (automatique) ---
+    // --- 🔄 État REDÉMARRAGE ---
     if (data.restart_state !== undefined) {
         const box = document.getElementById("restart_state");
 
@@ -102,6 +107,11 @@ function wifi_on(el) {
 
 function discovery_on(el) {
     websocket.send(JSON.stringify({ discovery_on: el.checked }));
+}
+
+// 🔥 Nouveau : Mode Test
+function mode_test(el) {
+    websocket.send(JSON.stringify({ mode_test: el.checked }));
 }
 
 function set_profile() {

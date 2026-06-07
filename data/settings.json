@@ -4,5 +4,6 @@
   "wifi_on": true,
   "wifi_ssid": "Bbox-E51CC95D",
   "wifi_psw": "53DA477752646293F62EEEDD9F21D2",
-  "track_profile": 0
+  "track_profile": 0,
+  "mode_test": true
 }
