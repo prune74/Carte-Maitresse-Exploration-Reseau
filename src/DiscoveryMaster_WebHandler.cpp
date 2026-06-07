@@ -127,28 +127,36 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
         // --- WIFI ON/OFF ---
         if (message.indexOf("wifi_on") >= 0)
         {
-            DiscoveryMaster_Settings::WIFI_ON = doc1["wifi_on"].as<bool>();
-            _can->sendWifiOnOff(DiscoveryMaster_Settings::WIFI_ON);
+            bool on = doc1["wifi_on"].as<bool>();
+            Serial.printf("[WEB] WIFI_ON = %s\n", on ? "true" : "false");
+
+            DiscoveryMaster_Settings::WIFI_ON = on;
+            _can->sendWifiOnOff(on);
             DiscoveryMaster_Settings::writeFile();
         }
 
         // --- DISCOVERY ON/OFF ---
         if (message.indexOf("discovery_on") >= 0)
         {
-            DiscoveryMaster_Settings::DISCOVERY_ON = doc1["discovery_on"].as<bool>();
-            _can->sendDiscoveryOnOff(DiscoveryMaster_Settings::DISCOVERY_ON);
+            bool on = doc1["discovery_on"].as<bool>();
+            Serial.printf("[WEB] DISCOVERY_ON = %s\n", on ? "true" : "false");
+
+            DiscoveryMaster_Settings::DISCOVERY_ON = on;
+            _can->sendDiscoveryOnOff(on);
             DiscoveryMaster_Settings::writeFile();
         }
 
         // --- SAVE ---
         if (message.indexOf("save") >= 0)
         {
+            Serial.println("[WEB] SAVE demandé");
             _can->sendSaveAll();
         }
 
         // --- RESTART ---
         if (message.indexOf("restartEsp") >= 0)
         {
+            Serial.println("[WEB] RESTART demandé");
             _can->sendRestartAll();
         }
 
@@ -158,8 +166,7 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
         if (message.indexOf("set_profile") >= 0)
         {
             uint8_t profile = doc1["value"] | 0;
-
-            Serial.printf("Changement profil voie demandé : %u\n", profile);
+            Serial.printf("[WEB] Changement profil voie → %u\n", profile);
 
             // Sauvegarde
             DiscoveryMaster_Settings::track_profile = profile;
@@ -199,7 +206,6 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
             _can->sendMessage(msg);
             Serial.println("[WEB] STOP global envoyé !");
         }
-    
     }
     break;
     }

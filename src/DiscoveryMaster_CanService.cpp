@@ -29,7 +29,8 @@ DiscoveryMaster_CanService::DiscoveryMaster_CanService()
 // ---------------------------------------------------------------------------
 bool DiscoveryMaster_CanService::begin()
 {
-    Serial.println("[MASTER][CAN] Service DiscoveryMaster_CanService prêt (CanUniversal)");
+    // Rien à faire ici : l’application appelle CanInit::begin(CAN_CONFIG)
+    Serial.println("MasterConfig → CAN1 prêt (via CanInit)");
     return true;
 }
 

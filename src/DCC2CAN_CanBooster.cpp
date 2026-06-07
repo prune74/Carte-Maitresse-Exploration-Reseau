@@ -8,7 +8,7 @@
 // -----------------------------------------------------------------------------
 void CanBooster_begin() {
     // Rien à faire ici : l’application appelle CanInit::begin(CAN_CONFIG)
-    Serial.println("DCC2CAN → CAN0 prêt (via CanInit)");
+    Serial.println("MasterConfig → CAN0 prêt (via CanInit)");
 }
 
 // -----------------------------------------------------------------------------

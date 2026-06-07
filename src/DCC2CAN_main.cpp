@@ -43,7 +43,6 @@ temps réel du signal DCC et à son émission sur le bus CAN Booster.
 #include "CanInit.h"
 #include "CanBus.h"
 #include "CanMsg.h"
-#include "DCC2CAN_CanConfig.h"
 
 void Booster_setup()
 {
@@ -56,11 +55,6 @@ void Booster_setup()
     // Décodeur DCC (ISR + file d’événements)
     // -------------------------------------------------------------------------
     DccDecoder_begin();
-
-    // -------------------------------------------------------------------------
-    // Initialisation CAN (CAN0 via CanUniversal)
-    // -------------------------------------------------------------------------
-    CanInit::begin(DCC2CAN_CONFIG);
 
     // -------------------------------------------------------------------------
     // Driver CAN Booster (TX only)

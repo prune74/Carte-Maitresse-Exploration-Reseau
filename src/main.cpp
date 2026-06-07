@@ -61,3 +61,22 @@ void loop()
     DiscoveryMaster_loop();
     Booster_loop();
 }
+
+/*
+#include <ACAN2515.h>
+#include <SPI.h>
+
+ACAN2515 can (13, SPI, 14); // CS=13, INT=14
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial) {}
+  Serial.println("Test MCP2515...");
+  SPI.begin(18, 19, 23, 13);
+  ACAN2515Settings settings(8000000, 250000, 50);
+  uint32_t err = can.begin(settings, [](){});
+  Serial.printf("Erreur init: 0x%X\n", err);
+}
+
+void loop() {}
+*/

@@ -39,6 +39,9 @@
  */
 
 #include "DiscoveryMaster_main.h"
+#include "CanInit.h"
+#include "CAN_Config.h"
+extern MasterConfig MASTER_CAN_CONFIG;
 
 // ---------------------------------------------------------------------------
 // VARIABLES GLOBALES DU MODULE SAMain
@@ -66,11 +69,23 @@ void DiscoveryMaster_setup()
     DiscoveryMaster_Settings::begin();
     DiscoveryMaster_Settings::readFile();
 
+    // -----------------------------------------------------------------------
+    // 🟦 INITIALISATION DES 2 BUS CAN (Booster + Discovery)
+    // -----------------------------------------------------------------------
+    // CAN0 = ESP32 interne (500 kbps) → Booster (DCC2CAN)
+    // CAN1 = MCP2515 externe (250 kbps) → Réseau Discovery
+    //
+    // Cette initialisation DOIT être faite avant tout service utilisant le CAN,
+    // sinon les tâches DCC2CAN ou DiscoveryMaster accèdent à un bus NULL → crash.
+    // -----------------------------------------------------------------------
+    CanInit::begin(MASTER_CAN_CONFIG);
+    Serial.println("[CAN] Initialisation de 2 bus...");
+
     // Wifi + Web
     wifi.start();
     webHandler.init(80);
 
-    // CAN Discovery (via CanUniversal)
+    // CAN Discovery (via CanInit)
     canService.begin();
 
     // Satellites
