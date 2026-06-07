@@ -34,6 +34,8 @@ des événements envoyés aux tâches FreeRTOS du Booster via une queue.
 */
 
 #include "DCC2CAN_DccDecoder.h"
+#include "DCC2CAN_FakeDcc.h"   // 🔥 pour DCC_FAKE_MODE
+#include "Debug.h"
 
 // ---------------------------------------------------------------------------
 // Variables internes
@@ -148,8 +150,22 @@ static void IRAM_ATTR dccISR() {
 void DccDecoder_begin() {
     dccQueue = xQueueCreate(DCC_EVENT_QUEUE_SIZE, sizeof(DccEvent));
 
+    if (dccQueue == nullptr) {
+        LOG_ERROR("DCC Decoder → échec création de la queue (taille=%u)", DCC_EVENT_QUEUE_SIZE);
+    } else {
+        LOG_INFO("DCC Decoder → queue créée (taille=%u)", DCC_EVENT_QUEUE_SIZE);
+    }
+
+    // 🔥 Mode simulation : on NE branche PAS l’ISR
+    if (DCC_FAKE_MODE) {
+        LOG_WARN("DCC Decoder → FakeDCC actif, ISR désactivée (pas d’attachInterrupt)");
+        return;
+    }
+
     pinMode(PIN_DCC_IN, INPUT);
     attachInterrupt(digitalPinToInterrupt(PIN_DCC_IN), dccISR, CHANGE);
+
+    LOG_INFO("DCC Decoder → attachInterrupt sur PIN_DCC_IN=%d (CHANGE)", PIN_DCC_IN);
 }
 
 // ---------------------------------------------------------------------------
@@ -159,7 +175,21 @@ bool DccDecoder_getEvent(DccEvent &ev) {
     if (dccQueue == nullptr)
         return false;
 
-    return xQueueReceive(dccQueue, &ev, 0) == pdTRUE;
+    bool ok = xQueueReceive(dccQueue, &ev, 0) == pdTRUE;
+
+#if DCCB_MEASURE_STATS
+    if (ok && DEBUG_LEVEL >= DEBUG_VERBOSE) {
+        if (ev.type == DCC_EVT_BIT) {
+            LOG_VERBOSE("DCC Event → BIT=%u phase=%u dt=%lu", ev.bit, ev.phase, (unsigned long)ev.dt_us);
+        } else if (ev.type == DCC_EVT_CUTOUT_START) {
+            LOG_VERBOSE("DCC Event → CUTOUT_START dt=%lu", (unsigned long)ev.dt_us);
+        } else if (ev.type == DCC_EVT_CUTOUT_END) {
+            LOG_VERBOSE("DCC Event → CUTOUT_END dt=%lu", (unsigned long)ev.dt_us);
+        }
+    }
+#endif
+
+    return ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -172,7 +202,18 @@ void DccDecoder_getStats(uint32_t &bit0Count, uint32_t &bit1Count,
     bit1Count   = s_bit1Count;
     cutoutCount = s_cutoutCount;
     badTiming   = s_badTiming;
+
+    LOG_INFO("DCC Stats → b0=%lu b1=%lu cutout=%lu bad=%lu",
+             bit0Count, bit1Count, cutoutCount, badTiming);
 #else
     bit0Count = bit1Count = cutoutCount = badTiming = 0;
 #endif
+}
+
+// ---------------------------------------------------------------------------
+// Accès à la queue DCC (utilisé par FakeDCC)
+// ---------------------------------------------------------------------------
+QueueHandle_t DccDecoder_getQueue()
+{
+    return dccQueue;
 }

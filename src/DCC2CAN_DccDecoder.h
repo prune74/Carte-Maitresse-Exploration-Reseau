@@ -25,3 +25,5 @@ bool DccDecoder_getEvent(DccEvent &ev);
 
 void DccDecoder_getStats(uint32_t &bit0Count, uint32_t &bit1Count,
                          uint32_t &cutoutCount, uint32_t &badTiming);
+                         
+QueueHandle_t DccDecoder_getQueue();

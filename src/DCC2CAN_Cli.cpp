@@ -18,6 +18,7 @@ statistiques du décodeur DCC ou le redémarrage de l’ESP32.
 */
 
 #include "DCC2CAN_Cli.h"
+#include "Debug.h"   // 🔥 Ajout du système de logs
 
 static String input;
 
@@ -36,26 +37,24 @@ void cmd_stats(const String &) {
     uint32_t b0, b1, co, bad;
     DccDecoder_getStats(b0, b1, co, bad);
 
-    Serial.printf(
-        "STATS: b0=%lu b1=%lu cutout=%lu bad=%lu\n",
-        b0, b1, co, bad
-    );
+    LOG_INFO("DCC Stats → b0=%lu b1=%lu cutout=%lu bad=%lu",
+             b0, b1, co, bad);
 }
 
 void cmd_reset(const String &) {
-    Serial.println("Resetting ESP32...");
+    LOG_WARN("Redémarrage ESP32 demandé via CLI");
     delay(100);
     ESP.restart();
 }
 
 void cmd_debug_on(const String &) {
-    Serial.println("Debug ON");
-    // TODO: activer un flag global si nécessaire
+    DEBUG_LEVEL = DEBUG_VERBOSE;
+    LOG_INFO("Debug CLI → mode VERBOSE activé");
 }
 
 void cmd_debug_off(const String &) {
-    Serial.println("Debug OFF");
-    // TODO: désactiver un flag global si nécessaire
+    DEBUG_LEVEL = DEBUG_ERROR;
+    LOG_INFO("Debug CLI → mode ERROR uniquement");
 }
 
 // ---------------------------------------------------------------------------
@@ -80,6 +79,7 @@ static bool Cli_dispatch(const String &cmd) {
             return true;
         }
     }
+    LOG_WARN("Commande inconnue : %s", cmd.c_str());
     return false;
 }
 
@@ -88,6 +88,7 @@ static bool Cli_dispatch(const String &cmd) {
 // ---------------------------------------------------------------------------
 void Cli_begin() {
     input.reserve(64);
+    LOG_INFO("CLI DCC2CAN initialisé");
 }
 
 // ---------------------------------------------------------------------------
@@ -105,10 +106,9 @@ void Cli_task() {
             input = "";
             cmd.trim();
 
-            if (!Cli_dispatch(cmd)) {
-                Serial.printf("Unknown command: %s\n", cmd.c_str());
-            }
+            LOG_VERBOSE("CLI → commande reçue : %s", cmd.c_str());
 
+            Cli_dispatch(cmd);
             return;
         }
 

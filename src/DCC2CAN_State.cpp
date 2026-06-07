@@ -6,40 +6,26 @@ Module centralisant l'état logique du flux DCC pour le module DCC2CAN.
 Il stocke le dernier événement DCC (bit, phase, durée, type) ainsi que l'état
 de supervision lié à la présence du signal DCC.
 
-Ce module sert de passerelle entre :
-- taskDcc()         → met à jour l'état DCC (g_state.lastEvent)
-- taskCan()         → envoie le bit DCC courant sur le CAN Booster (TX only)
-- taskSupervision() → surveille la présence du signal DCC (failsafe)
-
 📌 Fonctionnement
 - g_state :
     • lastEvent      : dernier événement DCC (bit, phase, dt_us, type)
     • status         : état logique (RUNNING, DCC_LOST, RECOVERY)
     • lastEventTime  : timestamp du dernier événement DCC
 
-- BoosterState_init() :
-    • initialise le mutex de synchronisation
-
 - BoosterState_updateFromDcc() :
     • copie l'événement DCC (volatile) vers l'état interne + timestamp
 
 - BoosterState_sendCan() :
     • envoie le bit DCC courant via le driver CAN Booster
-      (désactivé en cas de DCC_LOST ou RECOVERY)
 
 - BoosterState_supervise() :
     • détecte la perte du signal DCC (timeout)
     • gère le failsafe (DCC_LOST)
     • gère le retour à RUNNING après cooldown (RECOVERY)
-
-📌 Particularités
-- Thread-safe via mutex (compatible dual-core ESP32)
-- Supervision périodique exécutée par taskSupervision()
-- Ne gère ni télémétrie, ni RailCom, ni monitoring CAN
-- Supervision purement logique du flux DCC
 */
 
 #include "DCC2CAN_State.h"
+#include "Debug.h"
 
 // ---------------------------------------------------------------------------
 // État global
@@ -62,6 +48,7 @@ static uint32_t recoveryStartTime = 0;
 // ---------------------------------------------------------------------------
 void BoosterState_init() {
     gStateUpdateMutex = xSemaphoreCreateMutexStatic(&gStateUpdateMutexBuffer);
+    LOG_INFO("BoosterState → Mutex initialisé");
 }
 
 // ---------------------------------------------------------------------------
@@ -77,6 +64,9 @@ void BoosterState_updateFromDcc(const volatile DccEvent &ev) {
     g_state.lastEventTime   = millis();
 
     xSemaphoreGive(gStateUpdateMutex);
+
+    LOG_VERBOSE("BoosterState ← bit=%u phase=%u dt=%lu",
+                ev.bit, ev.phase, (unsigned long)ev.dt_us);
 }
 
 // ---------------------------------------------------------------------------
@@ -85,9 +75,26 @@ void BoosterState_updateFromDcc(const volatile DccEvent &ev) {
 void BoosterState_sendCan() {
     xSemaphoreTake(gStateUpdateMutex, portMAX_DELAY);
 
-    // Ne pas envoyer si perte de signal DCC
     if (g_state.status == BSTATE_RUNNING) {
-        CanBooster_sendDccBit(g_state.lastEvent.bit, g_state.lastEvent.phase);
+
+        uint8_t bit   = g_state.lastEvent.bit;
+        uint8_t phase = g_state.lastEvent.phase;
+
+        // 🔥 Anti-spam CAN : n'envoyer que si le bit ou la phase a changé
+        static uint8_t lastBit   = 255;
+        static uint8_t lastPhase = 255;
+
+        if (bit != lastBit || phase != lastPhase) {
+            lastBit   = bit;
+            lastPhase = phase;
+
+            CanBooster_sendDccBit(bit, phase);
+        } else {
+            // LOG_VERBOSE("CAN TX → inchangé, pas d'envoi");
+        }
+
+    } else {
+        LOG_VERBOSE("BoosterState → CAN TX bloqué (status=%u)", g_state.status);
     }
 
     xSemaphoreGive(gStateUpdateMutex);
@@ -110,14 +117,12 @@ void BoosterState_supervise() {
         if (g_state.status == BSTATE_RUNNING) {
             g_state.status = BSTATE_DCC_LOST;
             recoveryStartTime = now;
-#ifdef DEBUG
-            debug.println("⚠️  DCC LOST - Failsafe engaged");
-#endif
+            LOG_WARN("⚠️  DCC LOST → aucun événement depuis %u ms", timeSinceLastEvent);
         }
         else if (g_state.status == BSTATE_DCC_LOST) {
-            // Passage en mode RECOVERY après cooldown
             if (now - recoveryStartTime > DCCB_FAILSAFE_COOLDOWN_MS) {
                 g_state.status = BSTATE_RECOVERY;
+                LOG_INFO("DCC → passage en mode RECOVERY");
             }
         }
     }
@@ -128,9 +133,7 @@ void BoosterState_supervise() {
     else {
         if (g_state.status != BSTATE_RUNNING) {
             g_state.status = BSTATE_RUNNING;
-#ifdef DEBUG
-            debug.println("✅ DCC RECOVERED");
-#endif
+            LOG_INFO("✅ DCC RECOVERED → signal revenu");
         }
     }
 

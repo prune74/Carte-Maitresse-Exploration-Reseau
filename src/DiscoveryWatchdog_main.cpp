@@ -1,33 +1,28 @@
 /*
-DiscoveryWatchdog_main.cpp
+DiscoveryWatchdog_main.cpp — Version Discovery 2026
 
 🎯 Rôle
 Point d’entrée du module Watchdog Discovery 2026.
-Ce fichier centralise l’initialisation du Watchdog et la création des tâches
-FreeRTOS associées (réception heartbeat + supervision).
-
-📌 Fonctionnement
-- DiscoveryWatchdog_begin() initialise la table des heartbeat.
-- Crée les deux tâches FreeRTOS :
-    • DiscoveryWatchdog_TaskRx          → réception des heartbeat via CAN
-    • DiscoveryWatchdog_TaskSupervision → analyse des timeouts et STOP d’urgence
-- Le module est totalement indépendant du module SAMain.
-
-📌 Particularités
-- Architecture modulaire : le Watchdog peut être activé ou désactivé
-  indépendamment du reste du système.
-- Le fichier regroupe toute la logique d’intégration FreeRTOS du Watchdog.
+Ce fichier initialise le Watchdog et crée les tâches FreeRTOS associées :
+- TaskRx : réception des heartbeat via CAN
+- TaskSupervision : analyse des timeouts et STOP d’urgence
 */
 
 #include "DiscoveryWatchdog_main.h"
+#include "Debug.h"
 
 void DiscoveryWatchdog_begin()
 {
-    // Initialisation du module Watchdog
-    DiscoveryWatchdog_init();
+    LOG_INFO("Watchdog → initialisation du module");
 
+    // Initialisation interne du Watchdog
+    DiscoveryWatchdog_init();
+    LOG_INFO("Watchdog → structures internes initialisées");
+
+    // -----------------------------------------------------------------------
     // Tâche de réception des heartbeat
-    xTaskCreate(
+    // -----------------------------------------------------------------------
+    BaseType_t ok1 = xTaskCreate(
         DiscoveryWatchdog_TaskRx,
         "WD_RX",
         4096,
@@ -35,12 +30,26 @@ void DiscoveryWatchdog_begin()
         6,
         NULL);
 
+    if (ok1 == pdPASS)
+        LOG_INFO("Watchdog → tâche WD_RX créée (prio 6)");
+    else
+        LOG_ERROR("Watchdog → échec création tâche WD_RX");
+
+    // -----------------------------------------------------------------------
     // Tâche de supervision (timeouts)
-    xTaskCreate(
+    // -----------------------------------------------------------------------
+    BaseType_t ok2 = xTaskCreate(
         DiscoveryWatchdog_TaskSupervision,
         "WD_SUP",
         4096,
         NULL,
         5,
         NULL);
+
+    if (ok2 == pdPASS)
+        LOG_INFO("Watchdog → tâche WD_SUP créée (prio 5)");
+    else
+        LOG_ERROR("Watchdog → échec création tâche WD_SUP");
+
+    LOG_INFO("Watchdog → démarré");
 }

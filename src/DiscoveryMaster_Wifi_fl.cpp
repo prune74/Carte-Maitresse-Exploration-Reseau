@@ -1,105 +1,62 @@
-/*
-DiscoveryMaster_Wifi_fl.cpp / .h
-
-🎯 Rôle
-Gestion du WiFi pour le module SAMain.
-Ce module initialise la connexion réseau en mode AP (point d'accès) ou STA
-(client), selon la configuration définie dans DiscoveryMaster_Config.h.
-
-Il fournit une interface simple pour démarrer le WiFi du maître Discovery.
-
-📌 Fonctionnement
-- start() :
-    • Si WIFI_AP_MODE est défini :
-        - démarre un point d'accès WiFi (SSID "digital", password "digital")
-        - affiche l'adresse IP du réseau local
-    • Sinon (mode STA) :
-        - Charge SSID/Password depuis settings.json
-        - Se connecte à un réseau WiFi existant
-        - Attend la connexion avec timeout de 30s
-        - Affiche l'adresse IP obtenue ou échec du timeout
-
-📌 Particularités
-- WiFi credentials maintenant chargés depuis SPIFFS (sécurité améliorée)
-- Fallback défaut si settings.json absent : "digital"/"digital"
-- Mode AP toujours utilise "digital"/"digital" (défaut, peut être changé)
-- Section MDNS commentée pour utilisation future
-- Mode STA inclut timeout de 30s pour éviter hang infini
-
-🔗 Dépendances
-- WiFi (ESP32)
-- DiscoveryMaster_Config.h (mode AP/STA)
-- DiscoveryMaster_Settings.h (credentials depuis SPIFFS)
-*/
-
 #include "DiscoveryMaster_Wifi_fl.h"
+#include "DiscoveryMaster_Settings.h"
+#include "DiscoveryMaster_Config.h"
+#include "Debug.h"
+#include <WiFi.h>
 
 void DiscoveryMaster_Fl_Wifi::start()
 {
 #ifdef WIFI_AP_MODE
-  // Mode AP - Point d'accès
-  WiFi.softAP("digital", "digital");
+    // -----------------------------------------------------------------------
+    // MODE AP (Point d’accès)
+    // -----------------------------------------------------------------------
+    LOG_INFO("WiFi → Mode AP (Access Point)");
 
-#ifdef DEBUG
-  Serial.print("\n");
-  Serial.print("\nWiFi AP Mode - Connected to : ");
-  Serial.print("digital");
-  Serial.print("\nIP address :   ");
-  Serial.print(WiFi.softAPIP());
-  Serial.print("\n\n");
-#endif
+    const char *ssid = "digital";
+    const char *psw  = "digital";
+
+    WiFi.softAP(ssid, psw);
+
+    LOG_INFO("WiFi AP → SSID=%s  PSW=%s", ssid, psw);
+    LOG_INFO("WiFi AP → IP=%s", WiFi.softAPIP().toString().c_str());
 
 #else
-  // Mode STA - Client
-  // Load credentials from settings.json
-  String ssid = DiscoveryMaster_Settings::getWifiSsid();
-  String psw = DiscoveryMaster_Settings::getWifiPassword();
+    // -----------------------------------------------------------------------
+    // MODE STA (Client)
+    // -----------------------------------------------------------------------
+    String ssid = DiscoveryMaster_Settings::getWifiSsid();
+    String psw  = DiscoveryMaster_Settings::getWifiPassword();
 
-  //  IPAddress local_IP(ip[0], ip[1], ip[2], ip[3]);
-  //  IPAddress gateway(ip[0], ip[1], ip[2], 1);
-  //  IPAddress subnet(255, 255, 255, 0);
+    LOG_INFO("WiFi → Mode STA (Client)");
+    LOG_INFO("WiFi STA → Connexion à SSID=\"%s\"", ssid.c_str());
 
-  //  if (!WiFi.config(local_IP, gateway, subnet)) {
-  //    Serial.println("STA Failed to configure");
-  //  }
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid.c_str(), psw.c_str());
 
-  WiFi.begin(ssid.c_str(), psw.c_str());
-  
-  // Wait for connection with 30 second timeout
-  uint32_t timeout = millis() + 30000;
-  while (WiFi.status() != WL_CONNECTED && millis() < timeout)
-  {
-    delay(500);
-    Serial.print(".");
-  }
+    // Timeout 30 secondes
+    uint32_t timeout = millis() + 30000;
+    uint32_t lastDot = 0;
 
-  Serial.print("\n");
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    Serial.print("WiFi STA Mode - Connected to : ");
-    Serial.print(ssid);
-    Serial.print("\nIP address :   ");
-    Serial.print(WiFi.localIP());
-    Serial.print("\n\n");
-  }
-  else
-  {
-    Serial.print("WiFi STA Mode - Connection FAILED (timeout)\n");
-    Serial.print("Fallback to AP mode recommended\n\n");
-  }
+    while (WiFi.status() != WL_CONNECTED && millis() < timeout)
+    {
+        // Petit feedback toutes les 500 ms
+        if (millis() - lastDot > 500)
+        {
+            LOG_VERBOSE("WiFi STA → en attente…");
+            lastDot = millis();
+        }
+        vTaskDelay(pdMS_TO_TICKS(50)); // Non bloquant
+    }
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        LOG_INFO("WiFi STA → CONNECTÉ à \"%s\"", ssid.c_str());
+        LOG_INFO("WiFi STA → IP=%s", WiFi.localIP().toString().c_str());
+    }
+    else
+    {
+        LOG_WARN("WiFi STA → ÉCHEC de connexion (timeout)");
+        LOG_WARN("WiFi STA → Vérifier SSID/PSW ou passer en mode AP");
+    }
 #endif
-
-  //    if (!MDNS.begin(MDNS_NAME))
-  //    {
-  //        Serial.print("Error setting up MDNS responder!\n");
-  //        while (1)
-  //            delay(1000);
-  //    }
-  //
-  ////#ifdef DEBUG
-  //    Serial.print("MDNS responder started @ http://");
-  //    Serial.print(MDNS_NAME);
-  //    Serial.print(".local");
-  //    Serial.print("\n\n");
-  ////#endif
 }

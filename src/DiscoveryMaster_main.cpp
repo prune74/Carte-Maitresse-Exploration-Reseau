@@ -6,50 +6,22 @@
  * Ce fichier encapsule l’ensemble des initialisations et de la boucle principale
  * du système Discovery : WiFi, Web, bus CAN Discovery (MCP2515) et gestion des
  * satellites.
- *
- * Il fournit deux fonctions publiques :
- *     • DiscoveryMaster_setup() → initialisation complète du module
- *     • DiscoveryMaster_loop()  → exécution périodique des services Discovery
- *
- * 📌 Fonctionnement
- * - Initialise les paramètres système (lecture du fichier settings.json).
- * - Configure le WiFi (mode AP ou STA selon la configuration).
- * - Démarre le serveur Web et l’API Discovery.
- * - Initialise le bus CAN Discovery (via CanUniversal).
- * - Lance le gestionnaire de satellites (découverte, supervision, mise à jour).
- * - Exécute en boucle :
- *      • canService.loop()   → réception et traitement des trames Discovery
- *      • webHandler.loop()   → gestion des requêtes HTTP/WebSocket
- *      • satManager.loop()   → supervision des satellites
- *
- * 📌 Particularités
- * - Ne contient PAS de setup() ni loop() Arduino : ces fonctions sont fournies
- *   par le main.cpp global du firmware.
- * - Le module est indépendant du Booster (DCC_CAN-Booster) et du Watchdog.
- * - Le délai FreeRTOS (vTaskDelay) garantit une exécution non bloquante.
- * - Les variables globales du module (idMain, satManager, canService, wifi,
- *   webHandler) sont centralisées ici pour une architecture claire et modulaire.
- *
- * 🔗 Dépendances
- * - DiscoveryMaster_Settings          → configuration et ID maître
- * - DiscoveryMaster_Fl_Wifi           → gestion WiFi
- * - DiscoveryMaster_WebHandler        → interface Web Discovery
- * - DiscoveryMaster_CanService        → service CAN Discovery (via CanUniversal)
- * - DiscoveryMaster_SatManager        → gestion des satellites Discovery
  */
 
 #include "DiscoveryMaster_main.h"
 #include "CanInit.h"
 #include "CAN_Config.h"
+#include "Debug.h"
+
 extern MasterConfig MASTER_CAN_CONFIG;
 
 // ---------------------------------------------------------------------------
 // VARIABLES GLOBALES DU MODULE SAMain
 // ---------------------------------------------------------------------------
-uint16_t idMain = 254;                       // ID maître Discovery
-DiscoveryMaster_SatManager satManager;       // Gestionnaire de satellites
-DiscoveryMaster_CanService canService;       // Service CAN Discovery (via CanUniversal)
-DiscoveryMaster_Fl_Wifi wifi;                // Wifi
+uint16_t idMain = 254;                              // ID maître Discovery
+DiscoveryMaster_SatManager satManager;              // Gestionnaire de satellites
+DiscoveryMaster_CanService canService;              // Service CAN Discovery
+DiscoveryMaster_Fl_Wifi wifi;                       // Gestion WiFi
 DiscoveryMaster_WebHandler webHandler(&canService); // Interface Web Discovery
 
 // ---------------------------------------------------------------------------
@@ -57,39 +29,65 @@ DiscoveryMaster_WebHandler webHandler(&canService); // Interface Web Discovery
 // ---------------------------------------------------------------------------
 void DiscoveryMaster_setup()
 {
-    Serial.printf("\n\nProject :    %s", PROJECT);
-    Serial.printf("\nVersion :    %s", VERSION);
-    Serial.printf("\nCompiled :   %s - %s\n\n", __DATE__, __TIME__);
+    LOG_INFO("===============================================");
+    LOG_INFO("Project :    %s", PROJECT);
+    LOG_INFO("Version :    %s", VERSION);
+    LOG_INFO("Compiled :   %s - %s", __DATE__, __TIME__);
+    LOG_INFO("===============================================");
 
     // LED onboard (optionnel)
     pinMode(2, OUTPUT);
     digitalWrite(2, LOW);
 
-    // Settings
+    // -----------------------------------------------------------------------
+    // SETTINGS
+    // -----------------------------------------------------------------------
+    LOG_INFO("Chargement des paramètres (settings.json)...");
     DiscoveryMaster_Settings::begin();
     DiscoveryMaster_Settings::readFile();
 
     // -----------------------------------------------------------------------
     // 🟦 INITIALISATION DES 2 BUS CAN (Booster + Discovery)
     // -----------------------------------------------------------------------
-    // CAN0 = ESP32 interne (500 kbps) → Booster (DCC2CAN)
-    // CAN1 = MCP2515 externe (250 kbps) → Réseau Discovery
-    //
-    // Cette initialisation DOIT être faite avant tout service utilisant le CAN,
-    // sinon les tâches DCC2CAN ou DiscoveryMaster accèdent à un bus NULL → crash.
-    // -----------------------------------------------------------------------
+    LOG_INFO("Initialisation des bus CAN (CAN0 + CAN1)...");
     CanInit::begin(MASTER_CAN_CONFIG);
-    Serial.println("[CAN] Initialisation de 2 bus...");
+    
+    vTaskDelay(pdMS_TO_TICKS(5)); // Laisse TWAI sortir du RESET
+    CANMessage test;
+    test.id = 0x123;
+    test.len = 2;
+    test.data[0] = 0xAA;
+    test.data[1] = 0xBB;
 
-    // Wifi + Web
+    bool ok = ACAN_ESP32::can.tryToSend(test);
+    Serial.printf("[TEST DIRECT TWAI] tryToSend = %d\n", ok);
+
+    CanMsg testMsg((uint16_t)0x123, {0xAA, 0xBB});
+    bool okBus = CanBus::bus(0).send(testMsg);
+    LOG_INFO("TEST CanUniversal → CanBus::bus(0).send() = %d", okBus);
+
+    // -----------------------------------------------------------------------
+    // WIFI + WEB
+    // -----------------------------------------------------------------------
+    LOG_INFO("Initialisation WiFi...");
     wifi.start();
+
+    LOG_INFO("Initialisation WebHandler (port 80)...");
     webHandler.init(80);
 
-    // CAN Discovery (via CanInit)
+    // -----------------------------------------------------------------------
+    // CAN Discovery
+    // -----------------------------------------------------------------------
+    LOG_INFO("Initialisation du service CAN Discovery...");
     canService.begin();
 
-    // Satellites
+    // -----------------------------------------------------------------------
+    // SATELLITES
+    // -----------------------------------------------------------------------
+    LOG_INFO("Initialisation du gestionnaire de satellites...");
     satManager.begin();
+
+    LOG_INFO("DiscoveryMaster_setup() terminé");
 }
 
 // ---------------------------------------------------------------------------

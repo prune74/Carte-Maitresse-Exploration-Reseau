@@ -1,17 +1,27 @@
 #include "DiscoveryMaster_WebHandler.h"
+#include "DiscoveryMaster_Settings.h"
+#include "Debug.h"
 
 extern DiscoveryMaster_SatManager satManager;
 extern DiscoveryMaster_CanService canService;
 
+// ---------------------------------------------------------------------------
+// CONSTRUCTEUR
+// ---------------------------------------------------------------------------
 DiscoveryMaster_WebHandler::DiscoveryMaster_WebHandler(DiscoveryMaster_CanService *canService)
     : _server(nullptr), _ws(nullptr), _can(canService)
 {
 }
 
+// ---------------------------------------------------------------------------
+// INITIALISATION
+// ---------------------------------------------------------------------------
 void DiscoveryMaster_WebHandler::init(uint16_t webPort)
 {
+    LOG_INFO("WebHandler → initialisation (port %u)", webPort);
+
     _server = new AsyncWebServer(webPort);
-    _ws = new AsyncWebSocket("/ws");
+    _ws     = new AsyncWebSocket("/ws");
 
     _ws->onEvent(std::bind(&DiscoveryMaster_WebHandler::_WsEvent,
                            this,
@@ -26,6 +36,8 @@ void DiscoveryMaster_WebHandler::init(uint16_t webPort)
 
     _server->addHandler(_ws);
     _server->begin();
+
+    LOG_INFO("WebHandler → serveur HTTP/WebSocket démarré");
 }
 
 void DiscoveryMaster_WebHandler::loop()
@@ -41,14 +53,12 @@ void DiscoveryMaster_WebHandler::pushStatus()
     StaticJsonDocument<1024> doc;
 
     // --- État global ---
-    doc["wifi_on"] = DiscoveryMaster_Settings::WIFI_ON;
-    doc["discovery_on"] = DiscoveryMaster_Settings::DISCOVERY_ON;
-
-    // 🔥 Profil voie (N / HO)
+    doc["wifi_on"]       = DiscoveryMaster_Settings::WIFI_ON;
+    doc["discovery_on"]  = DiscoveryMaster_Settings::DISCOVERY_ON;
     doc["track_profile"] = DiscoveryMaster_Settings::track_profile;
 
-    // --- État CAN (supervision) ---
-    doc["can_ok"] = canService.isCanOK();
+    // --- État CAN ---
+    doc["can_ok"]     = canService.isCanOK();
     doc["can_last_ms"] = canService.lastRxAgeMs();
 
     // --- Liste des satellites ---
@@ -61,8 +71,8 @@ void DiscoveryMaster_WebHandler::pushStatus()
         if (s.id != NO_ID)
         {
             JsonObject o = satsJson.createNestedObject();
-            o["id"] = s.id;
-            o["online"] = s.online;
+            o["id"]       = s.id;
+            o["online"]   = s.online;
             o["lastSeen"] = s.lastSeen;
         }
     }
@@ -71,6 +81,8 @@ void DiscoveryMaster_WebHandler::pushStatus()
     String json;
     serializeJson(doc, json);
     _ws->textAll(json);
+
+    LOG_VERBOSE("WebHandler → pushStatus (%u satellites)", satsJson.size());
 }
 
 // ---------------------------------------------------------------------------
@@ -102,109 +114,114 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
     switch (type)
     {
     case WS_EVT_CONNECT:
-        Serial.printf("Client WebSocket #%u connecté depuis %s\n",
-                      client->id(),
-                      client->remoteIP().toString().c_str());
+        LOG_INFO("WebSocket → client #%u connecté (%s)",
+                 client->id(),
+                 client->remoteIP().toString().c_str());
         break;
 
     case WS_EVT_DISCONNECT:
-        Serial.printf("Client WebSocket #%u déconnecté\n", client->id());
+        LOG_INFO("WebSocket → client #%u déconnecté", client->id());
         break;
 
     case WS_EVT_DATA:
     {
-        StaticJsonDocument<1024> doc1;
-        DeserializationError error = deserializeJson(doc1, data);
+        StaticJsonDocument<1024> doc;
+        DeserializationError error = deserializeJson(doc, data);
 
         if (error)
         {
-            Serial.println("Erreur JSON");
+            LOG_WARN("WebSocket → erreur JSON");
             return;
         }
 
         String message = (char *)data;
+        LOG_VERBOSE("WebSocket RX → %s", message.c_str());
 
-        // --- WIFI ON/OFF ---
+        // -------------------------------------------------------------------
+        // WIFI ON/OFF
+        // -------------------------------------------------------------------
         if (message.indexOf("wifi_on") >= 0)
         {
-            bool on = doc1["wifi_on"].as<bool>();
-            Serial.printf("[WEB] WIFI_ON = %s\n", on ? "true" : "false");
+            bool on = doc["wifi_on"].as<bool>();
+            LOG_INFO("[WEB] WIFI_ON = %s", on ? "true" : "false");
 
             DiscoveryMaster_Settings::WIFI_ON = on;
             _can->sendWifiOnOff(on);
             DiscoveryMaster_Settings::writeFile();
         }
 
-        // --- DISCOVERY ON/OFF ---
+        // -------------------------------------------------------------------
+        // DISCOVERY ON/OFF
+        // -------------------------------------------------------------------
         if (message.indexOf("discovery_on") >= 0)
         {
-            bool on = doc1["discovery_on"].as<bool>();
-            Serial.printf("[WEB] DISCOVERY_ON = %s\n", on ? "true" : "false");
+            bool on = doc["discovery_on"].as<bool>();
+            LOG_INFO("[WEB] DISCOVERY_ON = %s", on ? "true" : "false");
 
             DiscoveryMaster_Settings::DISCOVERY_ON = on;
             _can->sendDiscoveryOnOff(on);
             DiscoveryMaster_Settings::writeFile();
         }
 
-        // --- SAVE ---
+        // -------------------------------------------------------------------
+        // SAVE
+        // -------------------------------------------------------------------
         if (message.indexOf("save") >= 0)
         {
-            Serial.println("[WEB] SAVE demandé");
+            LOG_INFO("[WEB] SAVE demandé");
             _can->sendSaveAll();
         }
 
-        // --- RESTART ---
+        // -------------------------------------------------------------------
+        // RESTART
+        // -------------------------------------------------------------------
         if (message.indexOf("restartEsp") >= 0)
         {
-            Serial.println("[WEB] RESTART demandé");
+            LOG_WARN("[WEB] RESTART demandé");
             _can->sendRestartAll();
         }
 
         // -------------------------------------------------------------------
-        // 🔥 PROFIL VOIE (N / HO)
+        // PROFIL VOIE (N / HO)
         // -------------------------------------------------------------------
         if (message.indexOf("set_profile") >= 0)
         {
-            uint8_t profile = doc1["value"] | 0;
-            Serial.printf("[WEB] Changement profil voie → %u\n", profile);
+            uint8_t profile = doc["value"] | 0;
+            LOG_INFO("[WEB] Profil voie → %u", profile);
 
-            // Sauvegarde
             DiscoveryMaster_Settings::track_profile = profile;
             DiscoveryMaster_Settings::writeFile();
 
-            // Envoi CAN vers tous les SA
             _can->sendTrackProfile(profile);
-
-            // Mise à jour immédiate de l’UI
             pushStatus();
         }
 
         // -------------------------------------------------------------------
-        // 🟩 CLEAR STOP GLOBAL (0x202)
+        // CLEAR STOP GLOBAL (0x202)
         // -------------------------------------------------------------------
         if (message.indexOf("clear_stop") >= 0)
         {
             CANMessage msg;
-            msg.id = PROTOCOLCAN_ID_CLEAR_STOP; // 0x202
+            msg.id  = PROTOCOLCAN_ID_CLEAR_STOP;
             msg.ext = false;
             msg.len = 0;
 
             _can->sendMessage(msg);
-            Serial.println("[WEB] CLEAR STOP envoyé !");
+            LOG_INFO("[WEB] CLEAR STOP envoyé");
         }
 
         // -------------------------------------------------------------------
-        // 🟥 STOP GLOBAL (0x201)
+        // STOP GLOBAL (0x201)
         // -------------------------------------------------------------------
         else if (message.indexOf("stop") >= 0)
         {
             CANMessage msg;
-            msg.id = PROTOCOLCAN_ID_STOP; // 0x201
+            msg.id  = PROTOCOLCAN_ID_STOP;
             msg.ext = false;
             msg.len = 0;
 
             _can->sendMessage(msg);
-            Serial.println("[WEB] STOP global envoyé !");
+            LOG_WARN("[WEB] STOP global envoyé");
         }
     }
     break;
@@ -221,6 +238,8 @@ void DiscoveryMaster_WebHandler::notifyClients()
 // ---------------------------------------------------------------------------
 void DiscoveryMaster_WebHandler::route()
 {
+    LOG_INFO("WebHandler → configuration des routes HTTP");
+
     _server->on("/", HTTP_GET, [](AsyncWebServerRequest *request)
                 { request->send(SPIFFS, "/index.html", "text/html"); });
 
@@ -241,6 +260,6 @@ void DiscoveryMaster_WebHandler::route()
 
     _server->onNotFound([](AsyncWebServerRequest *request)
                         {
-                            Serial.printf("Not found: %s!\r\n", request->url().c_str());
+                            LOG_WARN("HTTP 404 → %s", request->url().c_str());
                             request->send(404); });
 }

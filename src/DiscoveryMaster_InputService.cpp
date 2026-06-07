@@ -5,17 +5,6 @@
  * Gestion des entrées physiques du Master Discovery.
  * Ce module gère notamment le bouton CLEAR STOP, permettant à l’opérateur
  * de lever manuellement un STOP global (0x202) sans passer par l’interface Web.
- *
- * 📌 Fonctionnement
- * - Lecture périodique du bouton CLEAR STOP (entrée pull-up)
- * - Détection d’un front descendant (pression)
- * - Anti-rebond logiciel (20 ms)
- * - Envoi d’une trame CAN CLEAR STOP (0x202) via canService
- *
- * 📌 Particularités
- * - Module totalement indépendant du main, du WebHandler et du SatManager
- * - Architecture modulaire Discovery 2026 : chaque service a son rôle
- * - Le bouton fonctionne même si le WiFi ou l’UI Web sont indisponibles
  */
 
 #include "DiscoveryMaster_InputService.h"
@@ -23,6 +12,7 @@
 #include "DiscoveryMaster_CanService.h"
 #include "Discovery_Protocol.h"
 #include "DiscoveryMaster_Config.h"
+#include "Debug.h"
 
 extern DiscoveryMaster_CanService canService;
 
@@ -31,9 +21,9 @@ extern DiscoveryMaster_CanService canService;
 // ---------------------------------------------------------------------------
 void DiscoveryMaster_InputService::begin()
 {
-    // Bouton CLEAR STOP en pull-up interne
-    // HIGH = relâché, LOW = pressé
     pinMode(PIN_BTN_CLEAR_STOP, INPUT_PULLUP);
+
+    LOG_INFO("InputService → bouton CLEAR STOP initialisé (pull-up)");
 }
 
 // ---------------------------------------------------------------------------
@@ -55,19 +45,14 @@ void DiscoveryMaster_InputService::loop()
         // Front descendant → bouton pressé
         if (_prevBtn == true && cur == false)
         {
-            // Construction de la trame CLEAR STOP (0x202)
-            CANMessage msg;
-            msg.id  = PROTOCOLCAN_ID_CLEAR_STOP;   // 0x202
-            msg.ext = false;                       // 11 bits
-            msg.len = 0;                           // aucune data
+            // Nouvelle API CanMsg : ID + payload
+            CanMsg msg(uint16_t(PROTOCOLCAN_ID_CLEAR_STOP), {});
 
-            // Envoi sur le bus CAN Discovery
             canService.sendMessage(msg);
 
-            Serial.println("[MASTER] CLEAR STOP envoyé (bouton)");
+            LOG_INFO("[BTN] CLEAR STOP envoyé (bouton physique)");
         }
 
-        // Mise à jour de l’état précédent
         _prevBtn = cur;
     }
 }

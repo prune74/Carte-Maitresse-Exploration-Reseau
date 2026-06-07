@@ -28,50 +28,59 @@ temps réel du signal DCC et à son émission sur le bus CAN Booster.
 - Le découpage en modules séparés (DccDecoder, TaskDcc, TaskCan, Supervision,
   State, CLI) garantit une architecture claire et maintenable.
 - Le main reste volontairement minimal : aucune logique métier ici.
-
-🔗 Dépendances
-- DCC2CAN_DccDecoder   → décodage DCC
-- DCC2CAN_CanBooster   → émission CAN Booster
-- DCC2CAN_Cli          → interface série
-- DCC2CAN_TaskDcc      → tâche DCC
-- DCC2CAN_TaskCan      → tâche CAN (TX)
-- DCC2CAN_Supervision  → failsafe / supervision
-- FreeRTOS             → multitâche temps réel
 */
 
 #include "DCC2CAN_main.h"
 #include "CanInit.h"
 #include "CanBus.h"
 #include "CanMsg.h"
+#include "DCC2CAN_FakeDcc.h"
+#include "Debug.h"   // 🔥 Ajout du système de logs
+
 
 void Booster_setup()
 {
+    LOG_INFO("DCC2CAN → Initialisation du module Booster");
+
     // -------------------------------------------------------------------------
     // Gestion d’état
     // -------------------------------------------------------------------------
     BoosterState_init();
+    LOG_VERBOSE("BoosterState initialisé");
 
     // -------------------------------------------------------------------------
     // Décodeur DCC (ISR + file d’événements)
     // -------------------------------------------------------------------------
     DccDecoder_begin();
+    LOG_INFO("DCC Decoder initialisé (ISR + queue)");
 
     // -------------------------------------------------------------------------
     // Driver CAN Booster (TX only)
     // -------------------------------------------------------------------------
     CanBooster_begin();
+    LOG_INFO("CAN Booster (CAN0) initialisé");
 
     // -------------------------------------------------------------------------
     // CLI série
     // -------------------------------------------------------------------------
     Cli_begin();
+    LOG_INFO("CLI série initialisé");
 
     // -------------------------------------------------------------------------
     // Tâches FreeRTOS
     // -------------------------------------------------------------------------
+    LOG_INFO("Création des tâches FreeRTOS…");
+
     xTaskCreate(taskDcc, "DCC", 4096, NULL, 3, NULL);
+    LOG_VERBOSE("Tâche taskDcc créée");
+
     xTaskCreate(taskCan, "CAN", 4096, NULL, 3, NULL);
+    LOG_VERBOSE("Tâche taskCan créée");
+
     xTaskCreate(taskSupervision, "SUP", 2048, NULL, 1, NULL);
+    LOG_VERBOSE("Tâche taskSupervision créée");
+
+    LOG_INFO("DCC2CAN → Setup terminé");
 }
 
 void Booster_loop()
