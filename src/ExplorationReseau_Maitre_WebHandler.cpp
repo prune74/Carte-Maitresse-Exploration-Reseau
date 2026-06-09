@@ -1,15 +1,32 @@
-#include "DiscoveryMaster_WebHandler.h"
-#include "DiscoveryMaster_Settings.h"
+#include "ExplorationReseau_Maitre_WebHandler.h"
+#include "ExplorationReseau_Maitre_Settings.h"
+#include "ExplorationReseau_Maitre_SatManager.h"
+#include "ExplorationReseau_Maitre_CanService.h"
+#include "ExplorationReseau_Maitre_Config.h"
 #include "Debug.h"
 
-extern DiscoveryMaster_SatManager satManager;
-extern DiscoveryMaster_CanService canService;
-extern bool g_isTestMode; // 🔥 flag global
+// Instances externes
+extern ERM_SatManager satManager;
+extern ERM_CanService canService;
+extern bool g_isTestMode;
+
+/*
+ * ExplorationReseau_Maitre_WebHandler.cpp
+ *
+ * 🎯 Rôle
+ * Interface Web + WebSocket de la Carte Maîtresse ERM.
+ *
+ * Ce module assure :
+ *   • le serveur HTTP (fichiers statiques)
+ *   • le WebSocket bidirectionnel
+ *   • la réception des commandes UI
+ *   • la diffusion de l’état complet du système
+ */
 
 // ---------------------------------------------------------------------------
 // CONSTRUCTEUR
 // ---------------------------------------------------------------------------
-DiscoveryMaster_WebHandler::DiscoveryMaster_WebHandler(DiscoveryMaster_CanService *canService)
+ERM_WebHandler::ERM_WebHandler(ERM_CanService *canService)
     : _server(nullptr), _ws(nullptr), _can(canService)
 {
 }
@@ -17,14 +34,14 @@ DiscoveryMaster_WebHandler::DiscoveryMaster_WebHandler(DiscoveryMaster_CanServic
 // ---------------------------------------------------------------------------
 // INITIALISATION
 // ---------------------------------------------------------------------------
-void DiscoveryMaster_WebHandler::init(uint16_t webPort)
+void ERM_WebHandler::init(uint16_t webPort)
 {
-    LOG_INFO("WebHandler → initialisation (port %u)", webPort);
+    LOG_INFO("ERM_WebHandler → initialisation (port %u)", webPort);
 
     _server = new AsyncWebServer(webPort);
     _ws = new AsyncWebSocket("/ws");
 
-    _ws->onEvent(std::bind(&DiscoveryMaster_WebHandler::_WsEvent,
+    _ws->onEvent(std::bind(&ERM_WebHandler::ERM_wsEvent,
                            this,
                            std::placeholders::_1,
                            std::placeholders::_2,
@@ -33,15 +50,15 @@ void DiscoveryMaster_WebHandler::init(uint16_t webPort)
                            std::placeholders::_5,
                            std::placeholders::_6));
 
-    route();
+    ERM_route();
 
     _server->addHandler(_ws);
     _server->begin();
 
-    LOG_INFO("WebHandler → serveur HTTP/WebSocket démarré");
+    LOG_INFO("ERM_WebHandler → serveur HTTP/WebSocket démarré");
 }
 
-void DiscoveryMaster_WebHandler::loop()
+void ERM_WebHandler::loop()
 {
     _ws->cleanupClients();
 }
@@ -49,17 +66,15 @@ void DiscoveryMaster_WebHandler::loop()
 // ---------------------------------------------------------------------------
 // PUSH WEBSOCKET AUTOMATIQUE
 // ---------------------------------------------------------------------------
-void DiscoveryMaster_WebHandler::pushStatus()
+void ERM_WebHandler::pushStatus()
 {
     StaticJsonDocument<1024> doc;
 
     // --- État global ---
-    doc["wifi_on"] = DiscoveryMaster_Settings::WIFI_ON;
-    doc["discovery_on"] = DiscoveryMaster_Settings::DISCOVERY_ON;
-    doc["track_profile"] = DiscoveryMaster_Settings::track_profile;
-
-    // 🔥 Nouveau : mode test
-    doc["mode_test"] = DiscoveryMaster_Settings::MODE_TEST;
+    doc["wifi_on"] = ERM_Settings::WIFI_ON;
+    doc["exploration_on"] = ERM_Settings::EXPLORATION_ON;
+    doc["track_profile"] = ERM_Settings::track_profile;
+    doc["mode_test"] = ERM_Settings::MODE_TEST;
 
     // --- État CAN ---
     doc["can_ok"] = canService.isCanOK();
@@ -67,11 +82,10 @@ void DiscoveryMaster_WebHandler::pushStatus()
 
     // --- Liste des satellites ---
     JsonArray satsJson = doc.createNestedArray("sats");
-    const DiscoveryMaster_Satellite *sats = satManager.getAll();
 
-    for (int i = 0; i < NB_SAT; i++)
+    for (const auto *it = satManager.satBegin(); it != satManager.satEnd(); ++it)
     {
-        const auto &s = sats[i];
+        const auto &s = *it;
         if (s.id != NO_ID)
         {
             JsonObject o = satsJson.createNestedObject();
@@ -86,13 +100,13 @@ void DiscoveryMaster_WebHandler::pushStatus()
     serializeJson(doc, json);
     _ws->textAll(json);
 
-    LOG_VERBOSE("WebHandler → pushStatus (%u satellites)", satsJson.size());
+    LOG_VERBOSE("ERM_WebHandler → pushStatus (%u satellites)", satsJson.size());
 }
 
 // ---------------------------------------------------------------------------
 // MESSAGE TEXTE SIMPLE
 // ---------------------------------------------------------------------------
-void DiscoveryMaster_WebHandler::handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
+void ERM_WebHandler::ERM_handleSimpleMessage(void *arg, uint8_t *data, size_t len)
 {
     AwsFrameInfo *info = (AwsFrameInfo *)arg;
 
@@ -108,12 +122,12 @@ void DiscoveryMaster_WebHandler::handleWebSocketMessage(void *arg, uint8_t *data
 // ---------------------------------------------------------------------------
 // ÉVÉNEMENTS WEBSOCKET
 // ---------------------------------------------------------------------------
-void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
-                                          AsyncWebSocketClient *client,
-                                          AwsEventType type,
-                                          void *arg,
-                                          uint8_t *data,
-                                          size_t len)
+void ERM_WebHandler::ERM_wsEvent(AsyncWebSocket *server,
+                                 AsyncWebSocketClient *client,
+                                 AwsEventType type,
+                                 void *arg,
+                                 uint8_t *data,
+                                 size_t len)
 {
     switch (type)
     {
@@ -149,40 +163,37 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
             bool on = doc["wifi_on"].as<bool>();
             LOG_INFO("[WEB] WIFI_ON = %s", on ? "true" : "false");
 
-            DiscoveryMaster_Settings::WIFI_ON = on;
+            ERM_Settings::WIFI_ON = on;
             _can->sendWifiOnOff(on);
-            DiscoveryMaster_Settings::writeFile();
+            ERM_Settings::writeFile();
         }
 
         // -------------------------------------------------------------------
-        // DISCOVERY ON/OFF
+        // EXPLORATION ON/OFF
         // -------------------------------------------------------------------
-        if (message.indexOf("discovery_on") >= 0)
+        if (message.indexOf("exploration_on") >= 0)
         {
-            bool on = doc["discovery_on"].as<bool>();
-            LOG_INFO("[WEB] DISCOVERY_ON = %s", on ? "true" : "false");
+            bool on = doc["exploration_on"].as<bool>();
+            LOG_INFO("[WEB] EXPLORATION_ON = %s", on ? "true" : "false");
 
-            DiscoveryMaster_Settings::DISCOVERY_ON = on;
+            ERM_Settings::EXPLORATION_ON = on;
             _can->sendDiscoveryOnOff(on);
-            DiscoveryMaster_Settings::writeFile();
+            ERM_Settings::writeFile();
         }
 
         // -------------------------------------------------------------------
-        // MODE TEST (FakeDCC + CAN loopback)
+        // MODE TEST
         // -------------------------------------------------------------------
         if (message.indexOf("mode_test") >= 0)
         {
             bool on = doc["mode_test"].as<bool>();
             LOG_WARN("[WEB] MODE_TEST = %s", on ? "true" : "false");
 
-            // Mise à jour du paramètre persistant
-            DiscoveryMaster_Settings::MODE_TEST = on;
-            DiscoveryMaster_Settings::writeFile();
+            ERM_Settings::MODE_TEST = on;
+            ERM_Settings::writeFile();
 
-            // Mise à jour du flag global
             g_isTestMode = on;
 
-            // Renvoi de l'état complet
             pushStatus();
         }
 
@@ -205,41 +216,37 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
         }
 
         // -------------------------------------------------------------------
-        // PROFIL VOIE (N / HO)
+        // PROFIL VOIE
         // -------------------------------------------------------------------
         if (message.indexOf("set_profile") >= 0)
         {
             uint8_t profile = doc["value"] | 0;
             LOG_INFO("[WEB] Profil voie → %u", profile);
 
-            DiscoveryMaster_Settings::track_profile = profile;
-            DiscoveryMaster_Settings::writeFile();
+            ERM_Settings::track_profile = profile;
+            ERM_Settings::writeFile();
 
             _can->sendTrackProfile(profile);
             pushStatus();
         }
 
         // -------------------------------------------------------------------
-        // CLEAR STOP GLOBAL (0x202)
+        // CLEAR STOP GLOBAL
         // -------------------------------------------------------------------
         if (message.indexOf("clear_stop") >= 0)
         {
-            CanMsg msg;
-            msg.id = PROTOCOLCAN_ID_CLEAR_STOP; // 0x202
-            msg.dlc = 0;
+            CanMsg msg(uint16_t(PROTOCOLCAN_ID_CLEAR_STOP), {});
             _can->sendMessage(msg);
 
             LOG_INFO("[WEB] CLEAR STOP envoyé");
         }
 
         // -------------------------------------------------------------------
-        // STOP GLOBAL (0x201)
+        // STOP GLOBAL
         // -------------------------------------------------------------------
         else if (message.indexOf("stop") >= 0)
         {
-            CanMsg msg;
-            msg.id = PROTOCOLCAN_ID_STOP; // 0x201
-            msg.dlc = 0;
+            CanMsg msg(uint16_t(PROTOCOLCAN_ID_STOP), {});
             _can->sendMessage(msg);
 
             LOG_WARN("[WEB] STOP global envoyé");
@@ -249,7 +256,7 @@ void DiscoveryMaster_WebHandler::_WsEvent(AsyncWebSocket *server,
     }
 }
 
-void DiscoveryMaster_WebHandler::notifyClients()
+void ERM_WebHandler::notifyClients()
 {
     _ws->textAll(String("ok"));
 }
@@ -257,9 +264,9 @@ void DiscoveryMaster_WebHandler::notifyClients()
 // ---------------------------------------------------------------------------
 // ROUTES HTTP
 // ---------------------------------------------------------------------------
-void DiscoveryMaster_WebHandler::route()
+void ERM_WebHandler::ERM_route()
 {
-    LOG_INFO("WebHandler → configuration des routes HTTP");
+    LOG_INFO("ERM_WebHandler → configuration des routes HTTP");
 
     _server->on("/", HTTP_GET, [](AsyncWebServerRequest *request)
                 { request->send(SPIFFS, "/index.html", "text/html"); });

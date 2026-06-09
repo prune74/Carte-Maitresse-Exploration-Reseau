@@ -1,14 +1,25 @@
 /*
- * DiscoveryMaster_main.cpp / .h
+ * ExplorationReseau_Maitre_main.cpp
  *
  * 🎯 Rôle
- * Main logique du module SAMain.
- * Ce fichier encapsule l’ensemble des initialisations et de la boucle principale
- * du système Discovery : WiFi, Web, bus CAN Discovery (MCP2515) et gestion des
- * satellites.
+ * Point d’entrée principal de la Carte Maîtresse d’Exploration du Réseau (ERM).
+ *
+ * Ce module orchestre :
+ *   • l’initialisation du système (WiFi, Web, CAN, paramètres)
+ *   • la boucle principale FreeRTOS
+ *   • la gestion des satellites
+ *
+ * Il constitue le cœur du fonctionnement de la carte.
  */
 
-#include "DiscoveryMaster_main.h"
+#include "ExplorationReseau_Maitre_main.h"
+#include "ExplorationReseau_Maitre_Settings.h"
+#include "ExplorationReseau_Maitre_SatManager.h"
+#include "ExplorationReseau_Maitre_CanService.h"
+#include "ExplorationReseau_Maitre_Fl_Wifi.h"
+#include "ExplorationReseau_Maitre_WebHandler.h"
+#include "ExplorationReseau_Maitre_Config.h"
+
 #include "CanInit.h"
 #include "CAN_Config.h"
 #include "Debug.h"
@@ -16,23 +27,34 @@
 extern MasterConfig MASTER_CAN_CONFIG;
 
 // ---------------------------------------------------------------------------
-// VARIABLES GLOBALES DU MODULE SAMain
+// VARIABLES GLOBALES DU MODULE ERM
 // ---------------------------------------------------------------------------
-uint16_t idMain = 254;                              // ID maître Discovery
-DiscoveryMaster_SatManager satManager;              // Gestionnaire de satellites
-DiscoveryMaster_CanService canService;              // Service CAN Discovery
-DiscoveryMaster_Fl_Wifi wifi;                       // Gestion WiFi
-DiscoveryMaster_WebHandler webHandler(&canService); // Interface Web Discovery
+
+// Identifiant principal de la Carte Maîtresse
+uint16_t idMain = 254;
+
+// Gestionnaire des satellites
+ERM_SatManager satManager;
+
+// Service CAN principal
+ERM_CanService canService;
+
+// Gestion WiFi
+ERM_Fl_Wifi wifi;
+
+// Interface Web (dépend du service CAN)
+ERM_WebHandler webHandler(&canService);
 
 // ---------------------------------------------------------------------------
-// SETUP DU MODULE SAMain
+// SETUP PRINCIPAL DU MODULE ERM
 // ---------------------------------------------------------------------------
-void DiscoveryMaster_setup()
+// Initialise l’ensemble des sous-systèmes de la carte.
+void ERM_setup()
 {
     LOG_INFO("===============================================");
-    LOG_INFO("Project :    %s", PROJECT);
-    LOG_INFO("Version :    %s", VERSION);
-    LOG_INFO("Compiled :   %s - %s", __DATE__, __TIME__);
+    LOG_INFO("Projet  : %s", PROJECT);
+    LOG_INFO("Version : %s", VERSION);
+    LOG_INFO("Compilé : %s - %s", __DATE__, __TIME__);
     LOG_INFO("===============================================");
 
     // LED onboard (optionnel)
@@ -40,34 +62,21 @@ void DiscoveryMaster_setup()
     digitalWrite(2, LOW);
 
     // -----------------------------------------------------------------------
-    // SETTINGS
+    // PARAMÈTRES
     // -----------------------------------------------------------------------
     LOG_INFO("Chargement des paramètres (settings.json)...");
-    DiscoveryMaster_Settings::begin();
-    DiscoveryMaster_Settings::readFile();
+    ERM_Settings::begin();
+    ERM_Settings::readFile();
 
     // -----------------------------------------------------------------------
-    // 🟦 INITIALISATION DES 2 BUS CAN (Booster + Discovery)
+    // INITIALISATION DES BUS CAN
     // -----------------------------------------------------------------------
     LOG_INFO("Initialisation des bus CAN (CAN0 + CAN1)...");
     CanInit::begin(MASTER_CAN_CONFIG);
-    
-    vTaskDelay(pdMS_TO_TICKS(5)); // Laisse TWAI sortir du RESET
-    /*
-    CANMessage test;
-    test.id = 0x123;
-    test.len = 2;
-    test.data[0] = 0xAA;
-    test.data[1] = 0xBB;
 
-    bool ok = ACAN_ESP32::can.tryToSend(test);
-    Serial.printf("[TEST DIRECT TWAI] tryToSend = %d\n", ok);
+    // Laisse le contrôleur TWAI sortir du RESET
+    vTaskDelay(pdMS_TO_TICKS(5));
 
-    CanMsg testMsg((uint16_t)0x123, {0xAA, 0xBB});
-    bool okBus = CanBus::bus(0).send(testMsg);
-    LOG_INFO("TEST CanUniversal → CanBus::bus(0).send() = %d", okBus);
-    */
-   
     // -----------------------------------------------------------------------
     // WIFI + WEB
     // -----------------------------------------------------------------------
@@ -78,9 +87,9 @@ void DiscoveryMaster_setup()
     webHandler.init(80);
 
     // -----------------------------------------------------------------------
-    // CAN Discovery
+    // SERVICE CAN
     // -----------------------------------------------------------------------
-    LOG_INFO("Initialisation du service CAN Discovery...");
+    LOG_INFO("Initialisation du service CAN ERM...");
     canService.begin();
 
     // -----------------------------------------------------------------------
@@ -89,17 +98,20 @@ void DiscoveryMaster_setup()
     LOG_INFO("Initialisation du gestionnaire de satellites...");
     satManager.begin();
 
-    LOG_INFO("DiscoveryMaster_setup() terminé");
+    LOG_INFO("ERM_setup() terminé");
 }
 
 // ---------------------------------------------------------------------------
-// LOOP DU MODULE SAMain
+// BOUCLE PRINCIPALE DU MODULE ERM
 // ---------------------------------------------------------------------------
-void DiscoveryMaster_loop()
+// Exécutée en continu par FreeRTOS.
+// Chaque sous-système dispose de sa propre boucle non bloquante.
+void ERM_loop()
 {
     canService.loop();
     webHandler.loop();
     satManager.loop();
 
-    vTaskDelay(pdMS_TO_TICKS(10)); // Exécution non bloquante FreeRTOS
+    // Pause légère pour éviter de saturer le CPU
+    vTaskDelay(pdMS_TO_TICKS(10));
 }

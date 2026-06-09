@@ -1,10 +1,29 @@
-#include "DiscoveryMaster_Wifi_fl.h"
-#include "DiscoveryMaster_Settings.h"
-#include "DiscoveryMaster_Config.h"
+/*
+ * ExplorationReseau_Maitre_Fl_Wifi.cpp
+ *
+ * 🎯 Rôle
+ * Gestion du WiFi pour la Carte Maîtresse d’Exploration du Réseau (ERM).
+ *
+ * Deux modes sont possibles :
+ *   • Mode AP  : point d’accès local (SSID = "digital")
+ *   • Mode STA : connexion à un réseau existant (SSID/PSW depuis settings.json)
+ *
+ * Le module est volontairement simple et robuste :
+ *   • pas de blocage
+ *   • timeout de connexion
+ *   • logs détaillés
+ */
+
+#include "ExplorationReseau_Maitre_Fl_Wifi.h"
+#include "ExplorationReseau_Maitre_Settings.h"
+#include "ExplorationReseau_Maitre_Config.h"
 #include "Debug.h"
 #include <WiFi.h>
 
-void DiscoveryMaster_Fl_Wifi::start()
+// ---------------------------------------------------------------------------
+// DÉMARRAGE DU WIFI
+// ---------------------------------------------------------------------------
+void ERM_Fl_Wifi::start()
 {
 #ifdef WIFI_AP_MODE
     // -----------------------------------------------------------------------
@@ -24,8 +43,8 @@ void DiscoveryMaster_Fl_Wifi::start()
     // -----------------------------------------------------------------------
     // MODE STA (Client)
     // -----------------------------------------------------------------------
-    String ssid = DiscoveryMaster_Settings::getWifiSsid();
-    String psw  = DiscoveryMaster_Settings::getWifiPassword();
+    String ssid = ERM_Settings::getWifiSsid();
+    String psw  = ERM_Settings::getWifiPassword();
 
     LOG_INFO("WiFi → Mode STA (Client)");
     LOG_INFO("WiFi STA → Connexion à SSID=\"%s\"", ssid.c_str());
@@ -39,7 +58,7 @@ void DiscoveryMaster_Fl_Wifi::start()
 
     while (WiFi.status() != WL_CONNECTED && millis() < timeout)
     {
-        // Petit feedback toutes les 500 ms
+        // Feedback toutes les 500 ms
         if (millis() - lastDot > 500)
         {
             LOG_VERBOSE("WiFi STA → en attente…");
@@ -56,7 +75,7 @@ void DiscoveryMaster_Fl_Wifi::start()
     else
     {
         LOG_WARN("WiFi STA → ÉCHEC de connexion (timeout)");
-        LOG_WARN("WiFi STA → Vérifier SSID/PSW ou passer en mode AP");
+        LOG_WARN("WiFi STA → Vérifier SSID/PSW ou activer le mode AP");
     }
 #endif
 }

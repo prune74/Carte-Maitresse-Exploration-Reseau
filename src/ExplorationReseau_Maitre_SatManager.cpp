@@ -1,37 +1,55 @@
-#include "DiscoveryMaster_SatManager.h"
+#include "ExplorationReseau_Maitre_SatManager.h"
 #include "Debug.h"
 
 /*
-DiscoveryMaster_SatManager.cpp — Version Discovery 2026
+ * ExplorationReseau_Maitre_SatManager.cpp
+ *
+ * 🎯 Rôle
+ * Gestionnaire central des satellites du réseau d’exploration (ERM).
+ *
+ * Ce module assure :
+ *   • la découverte automatique des satellites
+ *   • la mise à jour des heartbeats
+ *   • la supervision online/offline
+ *   • l’interface de diagnostic pour la surveillance (ERS)
+ *
+ * Il utilise un tableau statique de ERM_Satellite pour garantir
+ * une exécution déterministe et sans allocation dynamique.
+ */
 
-🎯 Rôle
-Gestionnaire central des satellites Discovery :
-- découverte
-- heartbeat
-- supervision online/offline
-- interface Watchdog
-*/
-
-DiscoveryMaster_SatManager::DiscoveryMaster_SatManager()
+// ---------------------------------------------------------------------------
+// CONSTRUCTEUR
+// ---------------------------------------------------------------------------
+// Initialise tous les slots satellites avec NO_ID.
+ERM_SatManager::ERM_SatManager()
 {
     for (uint8_t i = 0; i < NB_SAT; i++)
         _sats[i].id = NO_ID;
 }
 
-void DiscoveryMaster_SatManager::begin()
+// ---------------------------------------------------------------------------
+// INITIALISATION
+// ---------------------------------------------------------------------------
+void ERM_SatManager::begin()
 {
-    LOG_INFO("SatManager → initialisé (%u slots)", NB_SAT);
+    LOG_INFO("ERM_SatManager → initialisé (%u slots)", NB_SAT);
 }
 
-void DiscoveryMaster_SatManager::loop()
+// ---------------------------------------------------------------------------
+// BOUCLE PRINCIPALE
+// ---------------------------------------------------------------------------
+// Pour l’instant, aucune supervision interne n’est nécessaire.
+// La surveillance est effectuée par ERM_Surveillance.
+void ERM_SatManager::loop()
 {
-    // Rien ici pour l’instant (supervision externe)
+    // Supervision externe (ERS)
 }
 
 // ---------------------------------------------------------------------------
 // AJOUT / MISE À JOUR D’UN SATELLITE
 // ---------------------------------------------------------------------------
-void DiscoveryMaster_SatManager::addOrUpdate(uint16_t idSat)
+// Enregistre un satellite s’il est nouveau, ou ignore s’il existe déjà.
+void ERM_SatManager::addOrUpdate(uint16_t idSat)
 {
     if (idSat == NO_ID)
         return;
@@ -41,7 +59,7 @@ void DiscoveryMaster_SatManager::addOrUpdate(uint16_t idSat)
     {
         if (_sats[i].id == idSat)
         {
-            // Rien à faire : déjà enregistré
+            // Satellite déjà enregistré
             return;
         }
     }
@@ -66,7 +84,8 @@ void DiscoveryMaster_SatManager::addOrUpdate(uint16_t idSat)
 // ---------------------------------------------------------------------------
 // HEARTBEAT
 // ---------------------------------------------------------------------------
-void DiscoveryMaster_SatManager::updateHeartbeat(uint16_t idSat)
+// Met à jour l’état d’un satellite lorsqu’un heartbeat est reçu.
+void ERM_SatManager::updateHeartbeat(uint16_t idSat)
 {
     for (uint8_t i = 0; i < NB_SAT; i++)
     {
@@ -94,7 +113,8 @@ void DiscoveryMaster_SatManager::updateHeartbeat(uint16_t idSat)
 // ---------------------------------------------------------------------------
 // SUPERVISION DES TIMEOUTS
 // ---------------------------------------------------------------------------
-void DiscoveryMaster_SatManager::checkTimeouts(uint32_t timeoutMs)
+// Déclare un satellite OFFLINE si aucun heartbeat n’a été reçu depuis timeoutMs.
+void ERM_SatManager::checkTimeouts(uint32_t timeoutMs)
 {
     uint32_t now = millis();
 
@@ -116,7 +136,8 @@ void DiscoveryMaster_SatManager::checkTimeouts(uint32_t timeoutMs)
 // ---------------------------------------------------------------------------
 // ACCÈS PAR ID
 // ---------------------------------------------------------------------------
-DiscoveryMaster_Satellite *DiscoveryMaster_SatManager::getById(uint16_t idSat)
+// Retourne un pointeur vers un satellite, ou nullptr si absent.
+ERM_Satellite *ERM_SatManager::getById(uint16_t idSat)
 {
     for (uint8_t i = 0; i < NB_SAT; i++)
     {
@@ -129,7 +150,8 @@ DiscoveryMaster_Satellite *DiscoveryMaster_SatManager::getById(uint16_t idSat)
 // ---------------------------------------------------------------------------
 // NOMBRE DE SATELLITES ENREGISTRÉS
 // ---------------------------------------------------------------------------
-uint8_t DiscoveryMaster_SatManager::count() const
+// Compte les satellites ayant un ID valide.
+uint8_t ERM_SatManager::count() const
 {
     uint8_t c = 0;
     for (uint8_t i = 0; i < NB_SAT; i++)
@@ -139,9 +161,10 @@ uint8_t DiscoveryMaster_SatManager::count() const
 }
 
 // ---------------------------------------------------------------------------
-// WATCHDOG : détecter un satellite offline
+// WATCHDOG : DÉTECTION D’UN SATELLITE OFFLINE
 // ---------------------------------------------------------------------------
-bool DiscoveryMaster_SatManager::hasOfflineSatellite(uint16_t &offlineId) const
+// Retourne true si au moins un satellite est offline.
+bool ERM_SatManager::hasOfflineSatellite(uint16_t &offlineId) const
 {
     for (uint8_t i = 0; i < NB_SAT; i++)
     {
