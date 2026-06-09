@@ -3,15 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Discovery Master Board</title>
+  <title>ERM – Carte Maîtresse</title>
   <link rel="stylesheet" href="style.css" />
   <script src="script.js"></script>
 </head>
 
 <body>
-  <header class="header">Discovery Master Board</header>
+  <header class="header">Exploration Réseau Maître – Dashboard</header>
 
-  <!-- 🟦 GRID LAYOUT -->
   <main class="dashboard-grid">
 
     <!-- 🟩 COLONNE GAUCHE -->
@@ -28,13 +27,12 @@
             <span class="slider"></span>
           </label>
 
-          <label>Discovery :</label>
+          <label>Exploration :</label>
           <label class="switch">
-            <input type="checkbox" id="discovery_on" onclick="discovery_on(this)">
+            <input type="checkbox" id="exploration_on" onclick="exploration_on(this)">
             <span class="slider"></span>
           </label>
 
-          <!-- 🔥 Nouveau : Mode Test -->
           <label>Mode Test :</label>
           <label class="switch">
             <input type="checkbox" id="mode_test" onclick="mode_test(this)">
@@ -69,9 +67,8 @@
 
       <!-- SÉCURITÉ -->
       <div class="card center">
-        <h3>Sécurité Discovery 2026</h3>
+        <h3>Sécurité ERM</h3>
 
-        <!-- Indicateur STOP -->
         <div id="stop_state" class="status">État : inconnu</div>
 
         <button class="btn-stop" onclick="send_stop()">STOP global</button>
@@ -80,21 +77,17 @@
 
       <!-- SATELLITES -->
       <div class="card">
-        <h3>Satellites découverts</h3>
+        <h3>Satellites détectés</h3>
         <div id="sat_list"></div>
       </div>
 
       <!-- ACTIONS GLOBALES -->
       <div class="card center">
-        
-        <!-- Indicateur sauvegarde -->
         <div id="save_state" class="status">Sauvegarde : en attente</div>
-
-        <!-- Indicateur redémarrage -->
         <div id="restart_state" class="status">Redémarrage : en attente</div>
 
-        <button class="btn-green" onclick="save()">Sauvegarder tous les nœuds</button>
-        <button class="btn-red" onclick="restartEsp()">Redémarrer tous les nœuds</button>
+        <button class="btn-green" onclick="save()">Sauvegarder tous les Cantons</button>
+        <button class="btn-red" onclick="restartEsp()">Redémarrer tous les Cantons</button>
       </div>
 
     </section>

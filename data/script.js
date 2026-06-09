@@ -17,10 +17,10 @@ function onMessage(event) {
 
     // --- États simples ---
     document.getElementById("wifi_on").checked = data.wifi_on;
-    document.getElementById("discovery_on").checked = data.discovery_on;
+    document.getElementById("exploration_on").checked = data.exploration_on;
     document.getElementById("track_profile").value = data.track_profile;
 
-    // 🔥 Nouveau : Mode Test
+    // Mode Test
     if (data.mode_test !== undefined) {
         document.getElementById("mode_test").checked = data.mode_test;
     }
@@ -47,7 +47,7 @@ function onMessage(event) {
     });
     document.getElementById("sat_list").innerHTML = html;
 
-    // --- 🟥🟩 État STOP / CLEAR STOP ---
+    // --- STOP / CLEAR STOP ---
     if (data.stop_state !== undefined) {
         const box = document.getElementById("stop_state");
 
@@ -60,7 +60,7 @@ function onMessage(event) {
         }
     }
 
-    // --- 💾 État SAUVEGARDE ---
+    // --- Sauvegarde ---
     if (data.save_state !== undefined) {
         const box = document.getElementById("save_state");
 
@@ -78,7 +78,7 @@ function onMessage(event) {
         }
     }
 
-    // --- 🔄 État REDÉMARRAGE ---
+    // --- Redémarrage ---
     if (data.restart_state !== undefined) {
         const box = document.getElementById("restart_state");
 
@@ -105,11 +105,10 @@ function wifi_on(el) {
     websocket.send(JSON.stringify({ wifi_on: el.checked }));
 }
 
-function discovery_on(el) {
-    websocket.send(JSON.stringify({ discovery_on: el.checked }));
+function exploration_on(el) {
+    websocket.send(JSON.stringify({ exploration_on: el.checked }));
 }
 
-// 🔥 Nouveau : Mode Test
 function mode_test(el) {
     websocket.send(JSON.stringify({ mode_test: el.checked }));
 }
@@ -120,7 +119,7 @@ function set_profile() {
 }
 
 /* ============================================================
-   💾 SAUVEGARDE
+   SAUVEGARDE
    ============================================================ */
 function save() {
     websocket.send(JSON.stringify({ save: true }));
@@ -133,7 +132,7 @@ function save() {
 }
 
 /* ============================================================
-   🔄 REDÉMARRAGE
+   REDÉMARRAGE
    ============================================================ */
 function restartEsp() {
     websocket.send(JSON.stringify({ restartEsp: true }));
@@ -146,7 +145,7 @@ function restartEsp() {
 }
 
 /* ============================================================
-   🟥 STOP GLOBAL (0x201)
+   STOP GLOBAL
    ============================================================ */
 function send_stop() {
     websocket.send(JSON.stringify({ stop: true }));
@@ -159,7 +158,7 @@ function send_stop() {
 }
 
 /* ============================================================
-   🟩 CLEAR STOP GLOBAL (0x202)
+   CLEAR STOP GLOBAL
    ============================================================ */
 function send_clear_stop() {
     websocket.send(JSON.stringify({ clear_stop: true }));

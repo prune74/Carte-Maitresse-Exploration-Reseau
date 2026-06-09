@@ -5,12 +5,12 @@
  * ============================================================================
  *  MasterConfig
  * ============================================================================
- *  Fournit la configuration CAN pour la carte Discovery Master.
+ *  Fournit la configuration CAN pour la Carte Maîtresse.
  *
  *  La carte Master possède DEUX bus CAN :
  *
  *      - CAN0 : bus interne ESP32 (TWAI) → utilisé pour le Booster
- *      - CAN1 : bus externe MCP2515 → utilisé pour le CanService Discovery
+ *      - CAN1 : bus externe MCP2515 → utilisé pour le CanService de Exploration du Réseau maître
  *
  *  Cette classe implémente l’interface CanConfigProvider, ce qui permet à
  *  CanInit::begin() d’interroger dynamiquement :

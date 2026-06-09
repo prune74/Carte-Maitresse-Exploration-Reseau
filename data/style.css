@@ -1,4 +1,4 @@
-/* DISCOVERY MASTER — DARK SOFT DASHBOARD */
+/* ERM MASTER — DARK SOFT DASHBOARD 2026 */
 
 body {
     margin: 0;
@@ -10,7 +10,7 @@ body {
 
 /* Header */
 .header {
-    background: linear-gradient(135deg, #1f4fa8, #3b82f6);
+    background: linear-gradient(135deg, #004aad, #3b82f6);
     padding: 20px;
     text-align: center;
     color: #f9fafb;
@@ -37,7 +37,7 @@ body {
     color: #e5e7eb;
 }
 
-/* Boutons */
+/* Buttons */
 button {
     border: none;
     padding: 10px 20px;
@@ -58,7 +58,7 @@ button:hover {
 .btn-green { background: #22c55e; }
 .btn-red   { background: #ef4444; }
 
-/* 🟥 STOP — bouton plus intense */
+/* STOP button */
 .btn-stop {
     background: #dc2626;
     box-shadow: 0 0 12px rgba(220, 38, 38, 0.45);
@@ -67,7 +67,7 @@ button:hover {
     box-shadow: 0 0 18px rgba(220, 38, 38, 0.65);
 }
 
-/* 🟩 CLEAR STOP — bouton plus lumineux */
+/* CLEAR STOP button */
 .btn-clear {
     background: #16a34a;
     box-shadow: 0 0 12px rgba(22, 163, 74, 0.45);
@@ -76,7 +76,7 @@ button:hover {
     box-shadow: 0 0 18px rgba(22, 163, 74, 0.65);
 }
 
-/* Etat STOP et CLEAR STOP */
+/* STOP / CLEAR STOP states */
 #stop_state {
     margin-bottom: 12px;
     padding: 10px;
@@ -94,7 +94,7 @@ button:hover {
     color: #bbf7d0;
 }
 
-/* État Sauvegarde / Redémarrage */
+/* Save / Restart states */
 #save_state, #restart_state {
     margin-bottom: 12px;
     padding: 10px;
@@ -106,18 +106,18 @@ button:hover {
 }
 
 .state-working {
-    background: #1e3a8a;   /* bleu foncé */
-    color: #bfdbfe;        /* bleu clair */
+    background: #1e3a8a;
+    color: #bfdbfe;
 }
 
 .state-ok {
-    background: #064e3b;   /* vert foncé */
-    color: #bbf7d0;        /* vert clair */
+    background: #064e3b;
+    color: #bbf7d0;
 }
 
 .state-error {
-    background: #7f1d1d;   /* rouge foncé */
-    color: #fecaca;        /* rouge clair */
+    background: #7f1d1d;
+    color: #fecaca;
 }
 
 /* Select */
@@ -190,10 +190,7 @@ input:checked + .slider:before {
 .sat-online  { color: #22c55e; font-weight: 500; }
 .sat-offline { color: #f97316; font-weight: 500; }
 
-/* ------------------------------------------------------ */
-/* 🟦 GRID LAYOUT DISCOVERY 2026 — (NOUVEAU) */
-/* ------------------------------------------------------ */
-
+/* GRID LAYOUT ERM 2026 */
 .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -207,7 +204,7 @@ input:checked + .slider:before {
     gap: 18px;
 }
 
-/* Responsive mobile */
+/* Mobile */
 @media (max-width: 900px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
