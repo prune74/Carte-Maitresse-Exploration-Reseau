@@ -13,7 +13,13 @@
  *   • la tâche de supervision des timeouts (ERS_TaskSupervision)
  *
  * Il constitue la couche Watchdog du système ERM.
+ *
+ * 📌 Architecture
+ * - ERS_begin() est l’unique fonction publique d’initialisation.
+ * - Les tâches FreeRTOS sont créées ici.
+ * - La logique interne (supervision, heartbeat, STOP global)
+ *   est gérée dans ExplorationReseau_Surveillance_Watchdog.cpp.
  */
 
-// Initialisation complète du module ERS
+// Initialisation complète du module ERS (tâches + structures internes)
 void ERS_begin();

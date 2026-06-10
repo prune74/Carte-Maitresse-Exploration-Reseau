@@ -10,6 +10,7 @@
  */
 
 #include "ExplorationReseau_Surveillance_Watchdog.h"
+#include "Variables.h"
 #include "ExplorationReseau_Maitre_SatManager.h"
 #include "ExplorationReseau_Maitre_CanService.h"
 #include "ProtocolCAN.h"
@@ -20,49 +21,78 @@
 extern ERM_SatManager satManager;
 extern ERM_CanService canService;
 
-// ---------------------------------------------------------------------------
-// Initialisation interne
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   INITIALISATION
+--------------------------------------------------------------------------- */
 void ERS_init()
 {
     LOG_INFO("ERS → init interne OK");
-    // Rien d’autre : SatManager gère déjà lastSeen/online
+
+    // Création du mutex si nécessaire
+    if (ersHeartbeatMutex == nullptr)
+    {
+        ersHeartbeatMutex = xSemaphoreCreateMutexStatic(&ersHeartbeatMutexBuffer);
+    }
+
+    ers_enabled = true;
+    ers_onlineCount = 0;
+    ers_lastSupervisionTime = millis();
 }
 
-// ---------------------------------------------------------------------------
-// Mise à jour heartbeat (appelé par ERS_TaskRx)
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   MISE À JOUR HEARTBEAT
+--------------------------------------------------------------------------- */
 void ERS_registerHeartbeat(uint16_t satId)
 {
+    if (!ers_enabled)
+        return;
+
+    // Mise à jour SatManager (online/offline)
     satManager.updateHeartbeat(satId);
+
+    // Mise à jour table interne ERS
+    if (xSemaphoreTake(ersHeartbeatMutex, 0) == pdTRUE)
+    {
+        ers_lastHeartbeat[satId] = millis();
+        xSemaphoreGive(ersHeartbeatMutex);
+    }
+
+    ers_heartbeatCount++;
+    ers_lastSatId = satId;
+
     LOG_VERBOSE("ERS → heartbeat reçu de %u", satId);
 }
 
-// ---------------------------------------------------------------------------
-// STOP global ERM
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   STOP GLOBAL
+--------------------------------------------------------------------------- */
 void ERS_triggerEmergencyStop()
 {
-    // Construction d’une trame 11 bits STOP global
     CanMsg msg(uint16_t(PROTOCOLCAN_ID_STOP), {}); // ID = 0x201, DLC = 0
 
     canService.sendMessage(msg);
     LOG_WARN("[ERS] STOP global envoyé !");
 }
 
-// ---------------------------------------------------------------------------
-// Supervision (appelé par ERS_TaskSupervision)
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   SUPERVISION
+--------------------------------------------------------------------------- */
 void ERS_supervise()
 {
+    if (!ers_enabled)
+        return;
+
+    ers_lastSupervisionTime = millis();
+
     // Mise à jour des états online/offline
     satManager.checkTimeouts(ERS_TIMEOUT_MS);
 
-    // Vérification d’un satellite offline
     uint16_t offlineId = 0;
 
     if (satManager.hasOfflineSatellite(offlineId))
     {
+        ers_timeoutCount++;
+
         LOG_ERROR("[ERS] Satellite %u OFFLINE → STOP global", offlineId);
         ERS_triggerEmergencyStop();
     }

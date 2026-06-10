@@ -78,7 +78,13 @@
       <!-- SATELLITES -->
       <div class="card">
         <h3>Satellites détectés</h3>
-        <div id="sat_list"></div>
+        <div id="sat_list" class="sat-container"></div>
+      </div>
+
+      <!-- CAN MONITOR -->
+      <div class="card">
+        <h3>CAN Monitor</h3>
+        <div id="can_monitor"></div>
       </div>
 
       <!-- ACTIONS GLOBALES -->
@@ -86,8 +92,14 @@
         <div id="save_state" class="status">Sauvegarde : en attente</div>
         <div id="restart_state" class="status">Redémarrage : en attente</div>
 
-        <button class="btn-green" onclick="save()">Sauvegarder tous les Cantons</button>
-        <button class="btn-red" onclick="restartEsp()">Redémarrer tous les Cantons</button>
+        <button class="btn-green" onclick="save()">Sauvegarder tous les nœuds</button>
+        <button class="btn-red" onclick="restartEsp()">Redémarrer tous les nœuds</button>
+      </div>
+
+      <!-- LOGS -->
+      <div class="card" id="log_panel">
+        <h3>Logs en temps réel</h3>
+        <div id="log_console"></div>
       </div>
 
     </section>

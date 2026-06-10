@@ -13,6 +13,7 @@
 
 #include "ExplorationReseau_Surveillance_main.h"
 #include "ExplorationReseau_Surveillance_Watchdog.h"
+#include "Variables.h"
 #include "Debug.h"
 
 // ---------------------------------------------------------------------------
@@ -22,7 +23,7 @@ void ERS_begin()
 {
     LOG_INFO("ERS → initialisation du module Surveillance");
 
-    // Initialisation interne (tableaux, timestamps…)
+    // Initialisation interne (mutex, tableaux, compteurs…)
     ERS_init();
     LOG_INFO("ERS → structures internes initialisées");
 
@@ -33,9 +34,9 @@ void ERS_begin()
         ERS_TaskRx,
         "ERS_RX",
         4096,
-        NULL,
+        nullptr,
         6,
-        NULL);
+        nullptr);
 
     if (ok1 == pdPASS)
         LOG_INFO("ERS → tâche ERS_RX créée (prio 6)");
@@ -49,9 +50,9 @@ void ERS_begin()
         ERS_TaskSupervision,
         "ERS_SUP",
         4096,
-        NULL,
+        nullptr,
         5,
-        NULL);
+        nullptr);
 
     if (ok2 == pdPASS)
         LOG_INFO("ERS → tâche ERS_SUP créée (prio 5)");

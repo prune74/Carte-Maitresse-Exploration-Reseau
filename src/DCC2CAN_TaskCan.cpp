@@ -1,21 +1,35 @@
 /*
-DCC2CAN_TaskCan.cpp / .h
-
-🎯 Rôle
-Tâche FreeRTOS responsable de l’envoi des trames CAN Booster. Elle transmet
-le bit DCC logique courant (0, 1 ou cutout) ainsi que sa phase, tels qu’ils
-sont fournis par le décodeur DCC.
-
-Cette tâche constitue le lien entre le décodeur DCC et le bus CAN Booster.
-*/
+ * DCC2CAN_TaskCan.cpp
+ *
+ * Tâche FreeRTOS responsable de l’envoi des trames CAN contenant
+ * le bit DCC courant (bit logique + phase).
+ *
+ * Cette tâche constitue le lien direct entre :
+ *   - le décodeur DCC (qui produit les événements)
+ *   - l’état logique du Booster (géré par BoosterState)
+ *   - le bus CAN Booster (via CanBooster_sendDccBit)
+ *
+ * La cadence fixe de 2 ms garantit un flux CAN stable et régulier,
+ * tout en laissant BoosterState_sendCan() décider s’il faut réellement
+ * envoyer une trame (anti-spam CAN).
+ */
 
 #include "DCC2CAN_TaskCan.h"
 #include "DCC2CAN_State.h"
-#include "Debug.h"   // 🔥 Ajout du système de logs
+#include "Debug.h"
 
+/* ---------------------------------------------------------------------------
+   TÂCHE CAN (TX)
+   ---------------------------------------------------------------------------
+   Cette tâche tourne toutes les 2 ms et demande à BoosterState d’envoyer
+   le bit courant sur le bus CAN. BoosterState_sendCan() applique ensuite
+   sa logique interne :
+     - envoi uniquement si bit/phase ont changé
+     - blocage si le système n’est pas en RUNNING
+--------------------------------------------------------------------------- */
 void taskCan(void *pv)
 {
-    (void)pv; // éviter un warning si pv n'est pas utilisé
+    (void)pv;
 
     LOG_INFO("Tâche CAN (TX) démarrée → cadence 2 ms");
 

@@ -1,74 +1,70 @@
 /*
-DCC2CAN_main.cpp / .h
-
-🎯 Rôle
-Point d’entrée du module DCC2CAN. Ce fichier initialise les sous-modules
-(DCC, CAN Booster, CLI) et crée les tâches FreeRTOS nécessaires au traitement
-temps réel du signal DCC et à son émission sur le bus CAN Booster.
-
-📌 Fonctionnement
-- Booster_setup() :
-    • Initialise la gestion d’état (BoosterState)
-    • Initialise le décodeur DCC (ISR + file d’événements)
-    • Initialise le driver CAN Booster (émission uniquement)
-    • Initialise le CLI série
-    • Initialise la pile CAN via CanUniversal (CAN0 = ESP32 interne)
-    • Crée les tâches FreeRTOS :
-        - taskDcc        → traitement des événements DCC
-        - taskCan        → envoi des trames CAN Booster
-        - taskSupervision→ surveillance du signal DCC (failsafe)
-
-- Booster_loop() :
-    • Exécute la tâche CLI (lecture des commandes série)
-    • Boucle légère et non bloquante (FreeRTOS gère les tâches temps réel)
-
-📌 Particularités
-- Le bus CAN Booster est unidirectionnel pour DCC2CAN : émission uniquement.
-- Aucune réception CAN n’est utilisée ni prévue dans ce module.
-- Le découpage en modules séparés (DccDecoder, TaskDcc, TaskCan, Supervision,
-  State, CLI) garantit une architecture claire et maintenable.
-- Le main reste volontairement minimal : aucune logique métier ici.
-*/
+ * DCC2CAN_main.cpp
+ *
+ * Point d’entrée du module DCC2CAN.
+ *
+ * Ce fichier orchestre l’initialisation de tous les sous-modules :
+ *   - gestion d’état (BoosterState)
+ *   - décodeur DCC (ISR + queue)
+ *   - driver CAN Booster (émission uniquement)
+ *   - interface CLI série
+ *   - création des tâches FreeRTOS
+ *
+ * Le main reste volontairement minimal : aucune logique métier ici.
+ * FreeRTOS prend ensuite le relais pour exécuter les tâches temps réel.
+ */
 
 #include "DCC2CAN_main.h"
+#include "DCC2CAN_State.h"
+#include "DCC2CAN_DccDecoder.h"
+#include "DCC2CAN_CanBooster.h"
+#include "DCC2CAN_TaskDcc.h"
+#include "DCC2CAN_TaskCan.h"
+#include "DCC2CAN_Supervision.h"
+#include "DCC2CAN_Cli.h"
+
 #include "CanInit.h"
 #include "CanBus.h"
 #include "CanMsg.h"
-#include "DCC2CAN_FakeDcc.h"
 #include "Debug.h"
 
-
+/* ---------------------------------------------------------------------------
+   INITIALISATION DU MODULE DCC2CAN
+   ---------------------------------------------------------------------------
+   Cette fonction configure tous les sous-systèmes nécessaires au traitement
+   du signal DCC et à son émission sur le bus CAN Booster.
+--------------------------------------------------------------------------- */
 void Booster_setup()
 {
     LOG_INFO("DCC2CAN → Initialisation du module Booster");
 
-    // -------------------------------------------------------------------------
-    // Gestion d’état
-    // -------------------------------------------------------------------------
+    /* ---------------------------------------------------------------
+       GESTION D’ÉTAT
+       --------------------------------------------------------------- */
     BoosterState_init();
     LOG_VERBOSE("BoosterState initialisé");
 
-    // -------------------------------------------------------------------------
-    // Décodeur DCC (ISR + file d’événements)
-    // -------------------------------------------------------------------------
+    /* ---------------------------------------------------------------
+       DÉCODEUR DCC (ISR + queue)
+       --------------------------------------------------------------- */
     DccDecoder_begin();
     LOG_INFO("DCC Decoder initialisé (ISR + queue)");
 
-    // -------------------------------------------------------------------------
-    // Driver CAN Booster (TX only)
-    // -------------------------------------------------------------------------
+    /* ---------------------------------------------------------------
+       DRIVER CAN BOOSTER (TX uniquement)
+       --------------------------------------------------------------- */
     CanBooster_begin();
     LOG_INFO("CAN Booster (CAN0) initialisé");
 
-    // -------------------------------------------------------------------------
-    // CLI série
-    // -------------------------------------------------------------------------
+    /* ---------------------------------------------------------------
+       INTERFACE CLI SÉRIE
+       --------------------------------------------------------------- */
     Cli_begin();
     LOG_INFO("CLI série initialisé");
 
-    // -------------------------------------------------------------------------
-    // Tâches FreeRTOS
-    // -------------------------------------------------------------------------
+    /* ---------------------------------------------------------------
+       CRÉATION DES TÂCHES FREERTOS
+       --------------------------------------------------------------- */
     LOG_INFO("Création des tâches FreeRTOS…");
 
     xTaskCreate(taskDcc, "DCC", 4096, NULL, 3, NULL);
@@ -83,6 +79,13 @@ void Booster_setup()
     LOG_INFO("DCC2CAN → Setup terminé");
 }
 
+/* ---------------------------------------------------------------------------
+   BOUCLE PRINCIPALE
+   ---------------------------------------------------------------------------
+   La boucle principale est volontairement légère :
+     - elle exécute la tâche CLI
+     - elle laisse FreeRTOS gérer les tâches temps réel
+--------------------------------------------------------------------------- */
 void Booster_loop()
 {
     Cli_task();

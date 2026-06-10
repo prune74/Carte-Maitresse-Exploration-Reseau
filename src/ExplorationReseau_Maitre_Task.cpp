@@ -2,12 +2,8 @@
 #include "ExplorationReseau_Maitre_SatManager.h"
 #include "ExplorationReseau_Maitre_CanService.h"
 #include "ExplorationReseau_Maitre_WebHandler.h"
+#include "Variables.h"
 #include "Debug.h"
-
-// --- Instances externes déclarées dans main.cpp ---
-extern ERM_SatManager   satManager;
-extern ERM_CanService   canService;
-extern ERM_WebHandler   webHandler;
 
 /*
  * ExplorationReseau_Maitre_Task.cpp
@@ -41,9 +37,9 @@ void ERM_Task::taskLoop(void *pvParameters)
 {
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
-    const uint32_t periodMs   = 1000;  // 1 seconde
-    const uint32_t timeoutMs  = 3000;  // 3 s sans heartbeat → offline
-    const uint32_t canTimeout = 2000;  // 2 s sans trame CAN → bus KO
+    const uint32_t periodMs = 1000;   // 1 seconde
+    const uint32_t timeoutMs = 3000;  // 3 s sans heartbeat → offline
+    const uint32_t canTimeout = 2000; // 2 s sans trame CAN → bus KO
 
     LOG_INFO("ERM_Task → démarrée (timeout=%u ms, CAN timeout=%u ms)",
              timeoutMs, canTimeout);

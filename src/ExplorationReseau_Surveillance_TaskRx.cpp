@@ -10,6 +10,7 @@
  */
 
 #include "ExplorationReseau_Surveillance_Watchdog.h"
+#include "Variables.h"
 #include "ExplorationReseau_Maitre_CanService.h"
 #include "ProtocolCAN.h"
 #include "CanMsg.h"

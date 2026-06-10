@@ -3,6 +3,8 @@
 #include "ExplorationReseau_Maitre_SatManager.h"
 #include "ExplorationReseau_Maitre_CanService.h"
 #include "ExplorationReseau_Maitre_Config.h"
+#include "Variables.h"
+
 #include "Debug.h"
 
 // Instances externes
@@ -10,17 +12,13 @@ extern ERM_SatManager satManager;
 extern ERM_CanService canService;
 extern bool g_isTestMode;
 
+// États globaux (pour logs UI)
+extern volatile uint8_t g_stopState;
+extern volatile uint8_t g_saveState;
+extern volatile uint8_t g_restartState;
+
 /*
  * ExplorationReseau_Maitre_WebHandler.cpp
- *
- * 🎯 Rôle
- * Interface Web + WebSocket de la Carte Maîtresse ERM.
- *
- * Ce module assure :
- *   • le serveur HTTP (fichiers statiques)
- *   • le WebSocket bidirectionnel
- *   • la réception des commandes UI
- *   • la diffusion de l’état complet du système
  */
 
 // ---------------------------------------------------------------------------
@@ -68,13 +66,18 @@ void ERM_WebHandler::loop()
 // ---------------------------------------------------------------------------
 void ERM_WebHandler::pushStatus()
 {
-    StaticJsonDocument<1024> doc;
+    StaticJsonDocument<2048> doc;
 
     // --- État global ---
     doc["wifi_on"] = ERM_Settings::WIFI_ON;
     doc["exploration_on"] = ERM_Settings::EXPLORATION_ON;
     doc["track_profile"] = ERM_Settings::track_profile;
     doc["mode_test"] = ERM_Settings::MODE_TEST;
+
+    // --- États STOP / SAVE / RESTART ---
+    doc["stop_state"] = g_stopState;
+    doc["save_state"] = g_saveState;
+    doc["restart_state"] = g_restartState;
 
     // --- État CAN ---
     doc["can_ok"] = canService.isCanOK();
@@ -99,24 +102,44 @@ void ERM_WebHandler::pushStatus()
     String json;
     serializeJson(doc, json);
     _ws->textAll(json);
-
-    LOG_VERBOSE("ERM_WebHandler → pushStatus (%u satellites)", satsJson.size());
 }
 
 // ---------------------------------------------------------------------------
-// MESSAGE TEXTE SIMPLE
+// ENVOI D’UN LOG AU DASHBOARD
 // ---------------------------------------------------------------------------
-void ERM_WebHandler::ERM_handleSimpleMessage(void *arg, uint8_t *data, size_t len)
+void ERM_WebHandler::pushLog(const char *type, const char *msg)
 {
-    AwsFrameInfo *info = (AwsFrameInfo *)arg;
+    StaticJsonDocument<256> doc;
+    doc["log"]["type"] = type;
+    doc["log"]["msg"] = msg;
 
-    if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
-    {
-        data[len] = 0;
+    String json;
+    serializeJson(doc, json);
+    _ws->textAll(json);
+}
 
-        if (strcmp((char *)data, "toggle") == 0)
-            notifyClients();
-    }
+// ---------------------------------------------------------------------------
+// ENVOI D’UNE FRAME CAN AU DASHBOARD
+// ---------------------------------------------------------------------------
+void ERM_WebHandler::pushCanFrame(const CanMsg &msg, const char *type)
+{
+    StaticJsonDocument<256> doc;
+
+    doc["can_frame"]["type"] = type;
+    doc["can_frame"]["time"] = millis();
+    doc["can_frame"]["id"] = msg.id;
+    doc["can_frame"]["dlc"] = msg.dlc;
+
+    char buffer[64];
+    char *p = buffer;
+    for (uint8_t i = 0; i < msg.dlc; i++)
+        p += sprintf(p, "%02X ", msg.data[i]);
+
+    doc["can_frame"]["data"] = buffer;
+
+    String json;
+    serializeJson(doc, json);
+    _ws->textAll(json);
 }
 
 // ---------------------------------------------------------------------------
@@ -135,130 +158,110 @@ void ERM_WebHandler::ERM_wsEvent(AsyncWebSocket *server,
         LOG_INFO("WebSocket → client #%u connecté (%s)",
                  client->id(),
                  client->remoteIP().toString().c_str());
+        pushLog("INFO", "Client Web connecté");
         break;
 
     case WS_EVT_DISCONNECT:
         LOG_INFO("WebSocket → client #%u déconnecté", client->id());
+        pushLog("WARN", "Client Web déconnecté");
         break;
 
     case WS_EVT_DATA:
     {
-        StaticJsonDocument<1024> doc;
-        DeserializationError error = deserializeJson(doc, data);
-
-        if (error)
+        StaticJsonDocument<512> doc;
+        if (deserializeJson(doc, data))
         {
             LOG_WARN("WebSocket → erreur JSON");
+            pushLog("ERR", "Erreur JSON WebSocket");
             return;
         }
 
         String message = (char *)data;
-        LOG_VERBOSE("WebSocket RX → %s", message.c_str());
 
-        // -------------------------------------------------------------------
-        // WIFI ON/OFF
-        // -------------------------------------------------------------------
+        // WIFI
         if (message.indexOf("wifi_on") >= 0)
         {
-            bool on = doc["wifi_on"].as<bool>();
-            LOG_INFO("[WEB] WIFI_ON = %s", on ? "true" : "false");
-
+            bool on = doc["wifi_on"];
             ERM_Settings::WIFI_ON = on;
             _can->sendWifiOnOff(on);
             ERM_Settings::writeFile();
+            pushLog("INFO", on ? "WIFI ON" : "WIFI OFF");
+            pushStatus();
         }
 
-        // -------------------------------------------------------------------
-        // EXPLORATION ON/OFF
-        // -------------------------------------------------------------------
+        // EXPLORATION
         if (message.indexOf("exploration_on") >= 0)
         {
-            bool on = doc["exploration_on"].as<bool>();
-            LOG_INFO("[WEB] EXPLORATION_ON = %s", on ? "true" : "false");
-
+            bool on = doc["exploration_on"];
             ERM_Settings::EXPLORATION_ON = on;
             _can->sendDiscoveryOnOff(on);
             ERM_Settings::writeFile();
+            pushLog("INFO", on ? "EXPLORATION ON" : "EXPLORATION OFF");
+            pushStatus();
         }
 
-        // -------------------------------------------------------------------
         // MODE TEST
-        // -------------------------------------------------------------------
         if (message.indexOf("mode_test") >= 0)
         {
-            bool on = doc["mode_test"].as<bool>();
-            LOG_WARN("[WEB] MODE_TEST = %s", on ? "true" : "false");
-
+            bool on = doc["mode_test"];
             ERM_Settings::MODE_TEST = on;
-            ERM_Settings::writeFile();
-
             g_isTestMode = on;
-
+            ERM_Settings::writeFile();
+            pushLog("INFO", on ? "MODE TEST ON" : "MODE TEST OFF");
             pushStatus();
         }
 
-        // -------------------------------------------------------------------
         // SAVE
-        // -------------------------------------------------------------------
         if (message.indexOf("save") >= 0)
         {
-            LOG_INFO("[WEB] SAVE demandé");
+            g_saveState = 0;
             _can->sendSaveAll();
-        }
-
-        // -------------------------------------------------------------------
-        // RESTART
-        // -------------------------------------------------------------------
-        if (message.indexOf("restartEsp") >= 0)
-        {
-            LOG_WARN("[WEB] RESTART demandé");
-            _can->sendRestartAll();
-        }
-
-        // -------------------------------------------------------------------
-        // PROFIL VOIE
-        // -------------------------------------------------------------------
-        if (message.indexOf("set_profile") >= 0)
-        {
-            uint8_t profile = doc["value"] | 0;
-            LOG_INFO("[WEB] Profil voie → %u", profile);
-
-            ERM_Settings::track_profile = profile;
-            ERM_Settings::writeFile();
-
-            _can->sendTrackProfile(profile);
+            pushLog("INFO", "SAVE ALL envoyé");
             pushStatus();
         }
 
-        // -------------------------------------------------------------------
-        // CLEAR STOP GLOBAL
-        // -------------------------------------------------------------------
-        if (message.indexOf("clear_stop") >= 0)
+        // RESTART
+        if (message.indexOf("restartEsp") >= 0)
         {
-            CanMsg msg(uint16_t(PROTOCOLCAN_ID_CLEAR_STOP), {});
-            _can->sendMessage(msg);
-
-            LOG_INFO("[WEB] CLEAR STOP envoyé");
+            g_restartState = 0;
+            _can->sendRestartAll();
+            pushLog("WARN", "RESTART demandé");
+            pushStatus();
         }
 
-        // -------------------------------------------------------------------
-        // STOP GLOBAL
-        // -------------------------------------------------------------------
+        // PROFIL VOIE
+        if (message.indexOf("set_profile") >= 0)
+        {
+            uint8_t profile = doc["value"];
+            ERM_Settings::track_profile = profile;
+            ERM_Settings::writeFile();
+            _can->sendTrackProfile(profile);
+
+            String logMsg = "SET_PROFILE = " + String(profile);
+            pushLog("INFO", logMsg.c_str());
+            pushStatus();
+        }
+
+        // CLEAR STOP
+        if (message.indexOf("clear_stop") >= 0)
+        {
+            g_stopState = 0;
+            _can->sendMessage(CanMsg(uint16_t(PROTOCOLCAN_ID_CLEAR_STOP), {}));
+            pushLog("INFO", "CLEAR STOP envoyé");
+            pushStatus();
+        }
+
+        // STOP
         else if (message.indexOf("stop") >= 0)
         {
-            CanMsg msg(uint16_t(PROTOCOLCAN_ID_STOP), {});
-            _can->sendMessage(msg);
-
-            LOG_WARN("[WEB] STOP global envoyé");
+            g_stopState = 1;
+            _can->sendMessage(CanMsg(uint16_t(PROTOCOLCAN_ID_STOP), {}));
+            pushLog("WARN", "STOP envoyé");
+            pushStatus();
         }
     }
     break;
     }
-}
-
-void ERM_WebHandler::notifyClients()
-{
-    _ws->textAll(String("ok"));
 }
 
 // ---------------------------------------------------------------------------
@@ -271,17 +274,11 @@ void ERM_WebHandler::ERM_route()
     _server->on("/", HTTP_GET, [](AsyncWebServerRequest *request)
                 { request->send(SPIFFS, "/index.html", "text/html"); });
 
-    _server->on("/w3.css", HTTP_GET, [](AsyncWebServerRequest *request)
-                { request->send(SPIFFS, "/w3.css", "text/css"); });
-
     _server->on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request)
                 { request->send(SPIFFS, "/style.css", "text/css"); });
 
     _server->on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request)
                 { request->send(SPIFFS, "/script.js", "text/javascript"); });
-
-    _server->on("/settings.json", HTTP_GET, [](AsyncWebServerRequest *request)
-                { request->send(SPIFFS, "/settings.json", "text/json"); });
 
     _server->on("/favicon.png", HTTP_GET, [](AsyncWebServerRequest *request)
                 { request->send(SPIFFS, "/favicon.png", "image/png"); });

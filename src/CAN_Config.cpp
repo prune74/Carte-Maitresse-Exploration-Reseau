@@ -1,5 +1,5 @@
 #include "CAN_Config.h"
 
-bool g_isTestMode = true;
+extern bool g_isTestMode;
 
 MasterConfig MASTER_CAN_CONFIG;

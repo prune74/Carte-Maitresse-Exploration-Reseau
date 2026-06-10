@@ -9,11 +9,12 @@
  */
 
 #include "ExplorationReseau_Surveillance_Watchdog.h"
+#include "Variables.h"
 #include "Debug.h"
 
 void ERS_TaskSupervision(void *pv)
 {
-    LOG_INFO("ERS SUP → tâche démarrée (période %u ms)", ERS_PERIOD_MS);
+    LOG_INFO("ERS SUP → tâche démarrée (période %u ms)", ERS_SUP_PERIOD_MS);
 
     for (;;)
     {
@@ -22,6 +23,6 @@ void ERS_TaskSupervision(void *pv)
         LOG_VERBOSE("ERS SUP → supervision exécutée");
 
         // Période de supervision
-        vTaskDelay(pdMS_TO_TICKS(ERS_PERIOD_MS));
+        vTaskDelay(pdMS_TO_TICKS(ERS_SUP_PERIOD_MS));
     }
 }

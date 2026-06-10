@@ -9,14 +9,13 @@
  */
 
 #include "ExplorationReseau_Maitre_InputService.h"
+#include "Variables.h"
 #include "ExplorationReseau_Maitre_Pins.h"
 #include "ExplorationReseau_Maitre_CanService.h"
 #include "ExplorationReseau_Protocol.h"
 #include "ExplorationReseau_Maitre_Config.h"
-#include "Debug.h"
 
-// Service CAN principal (version abrégée ERM)
-extern ERM_CanService canService;
+#include "Debug.h"
 
 // ---------------------------------------------------------------------------
 // Initialisation du service d’entrées

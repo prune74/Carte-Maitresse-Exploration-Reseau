@@ -13,6 +13,7 @@
  */
 
 #include "ExplorationReseau_Maitre_main.h"
+#include "Variables.h"
 #include "ExplorationReseau_Maitre_Settings.h"
 #include "ExplorationReseau_Maitre_SatManager.h"
 #include "ExplorationReseau_Maitre_CanService.h"
@@ -27,23 +28,11 @@
 extern MasterConfig MASTER_CAN_CONFIG;
 
 // ---------------------------------------------------------------------------
-// VARIABLES GLOBALES DU MODULE ERM
+// VARIABLES LOCALES DU MODULE ERM
 // ---------------------------------------------------------------------------
 
-// Identifiant principal de la Carte Maîtresse
-uint16_t idMain = 254;
-
-// Gestionnaire des satellites
-ERM_SatManager satManager;
-
-// Service CAN principal
-ERM_CanService canService;
-
-// Gestion WiFi
+// Gestion WiFi (reste local au module)
 ERM_Fl_Wifi wifi;
-
-// Interface Web (dépend du service CAN)
-ERM_WebHandler webHandler(&canService);
 
 // ---------------------------------------------------------------------------
 // SETUP PRINCIPAL DU MODULE ERM

@@ -2,6 +2,7 @@
 
 #include "CanMsg.h"
 #include "CanBus.h"
+#include "Variables.h"
 
 // ---------------------------------------------------------------------------
 // Classe ERM_CanService

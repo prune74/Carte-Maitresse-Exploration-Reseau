@@ -2,26 +2,11 @@
 #include "ExplorationReseau_Maitre_Pins.h"
 #include "ExplorationReseau_Maitre_Settings.h"
 #include "ExplorationReseau_Maitre_SatManager.h"
+#include "Variables.h"
 #include "ProtocolCAN.h"
 #include "ExplorationReseau_Protocol.h"
 #include "CanBus.h"
 #include "Debug.h"
-
-// ---------------------------------------------------------------------------
-// VARIABLES EXTERNES
-// ---------------------------------------------------------------------------
-
-// Identifiant principal de la Carte Maîtresse (254 par défaut)
-extern uint16_t idMain;
-
-// Gestionnaire des satellites du réseau (version abrégée ERM)
-extern ERM_SatManager satManager;
-
-// Indique si la carte fonctionne en mode test (loopback)
-extern bool g_isTestMode;
-
-// Tableau des bus CAN disponibles (CAN[1] = MCP2515 externe)
-extern CanBus CAN[];
 
 // ---------------------------------------------------------------------------
 // CONSTRUCTEUR
@@ -56,7 +41,8 @@ void ERM_CanService::loop()
 {
     CanMsg msg;
 
-    if (CAN[1].receive(msg))
+    if (CAN[1] && CAN[1]->receive(msg))
+
     {
         _lastRxTime = millis();
         _canOK = true;
@@ -187,7 +173,7 @@ bool ERM_CanService::ERM_sendFrame(const CanMsg &msg)
         return true;
     }
 
-    bool ok = CAN[1].send(msg);
+    bool ok = CAN[1] ? CAN[1]->send(msg) : false;
 
     if (!ok)
         LOG_WARN("[CAN] Échec envoi ID=0x%X", msg.id);
@@ -209,8 +195,7 @@ void ERM_CanService::ERM_handleCmdTestBus(uint16_t idExp, uint8_t prio)
         CMD_SAT_TEST_BUS_REPLY,
         true,
         idExp,
-        {uint8_t(1)}
-    );
+        {uint8_t(1)});
 
     ERM_sendFrame(msg);
     satManager.addOrUpdate(idExp);
@@ -230,8 +215,7 @@ void ERM_CanService::ERM_handleCmdRequestId(uint16_t idExp, uint8_t prio)
             CMD_SAT_REQUEST_ID_REPLY,
             true,
             idExp,
-            {uint8_t(ERM_Settings::idNode)}
-        );
+            {uint8_t(ERM_Settings::idNode)});
 
         if (ERM_sendFrame(msg))
         {
@@ -257,8 +241,7 @@ void ERM_CanService::sendWifiOnOff(bool on)
     LOG_INFO("[WEB→CAN] WIFI_ON_OFF = %s", on ? "true" : "false");
 
     CanMsg msg = ProtocolCAN::makeMsg(
-        2, CMD_WIFI_ON_OFF, false, idMain, {uint8_t(on ? 1 : 0)}
-    );
+        2, CMD_WIFI_ON_OFF, false, idMain, {uint8_t(on ? 1 : 0)});
     ERM_sendFrame(msg);
 }
 
@@ -267,8 +250,7 @@ void ERM_CanService::sendDiscoveryOnOff(bool on)
     LOG_INFO("[WEB→CAN] EXPLORATION_ON_OFF = %s", on ? "true" : "false");
 
     CanMsg msg = ProtocolCAN::makeMsg(
-        2, CMD_DISCOVERY_ON_OFF, false, idMain, {uint8_t(on ? 1 : 0)}
-    );
+        2, CMD_DISCOVERY_ON_OFF, false, idMain, {uint8_t(on ? 1 : 0)});
     ERM_sendFrame(msg);
 }
 
@@ -277,8 +259,7 @@ void ERM_CanService::sendSaveAll()
     LOG_INFO("[WEB→CAN] SAVE_ALL");
 
     CanMsg msg = ProtocolCAN::makeMsg(
-        2, CMD_SAVE_ALL, false, idMain, {}
-    );
+        2, CMD_SAVE_ALL, false, idMain, {});
     ERM_sendFrame(msg);
 }
 
@@ -287,8 +268,7 @@ void ERM_CanService::sendRestartAll()
     LOG_INFO("[WEB→CAN] RESTART_ALL");
 
     CanMsg msg = ProtocolCAN::makeMsg(
-        2, CMD_RESTART_ALL, false, idMain, {}
-    );
+        2, CMD_RESTART_ALL, false, idMain, {});
     ERM_sendFrame(msg);
 }
 
@@ -297,7 +277,6 @@ void ERM_CanService::sendTrackProfile(uint8_t profile)
     LOG_INFO("[WEB→CAN] SET_PROFILE = %u", profile);
 
     CanMsg msg = ProtocolCAN::makeMsg(
-        2, CMD_SET_PROFILE, false, idMain, {uint8_t(profile)}
-    );
+        2, CMD_SET_PROFILE, false, idMain, {uint8_t(profile)});
     ERM_sendFrame(msg);
 }
