@@ -8,6 +8,9 @@
  *   • ERM_Maitre      → WiFi, Web, CAN, satellites
  *   • DCC2CAN Booster → Décodage DCC + émission CAN
  *   • ERS             → Surveillance (heartbeats + STOP d’urgence)
+ *
+ * Le main reste volontairement minimal : aucune logique métier ici.
+ * FreeRTOS prend ensuite le relais pour exécuter les tâches temps réel.
  */
 
 #include <Arduino.h>
@@ -21,14 +24,15 @@ void setup()
     Serial.begin(115200);
     delay(200); // Stabilisation UART
 
-    LOG_INFO("===============================================");
-    LOG_INFO("   E X P L O R A T I O N   R E S E A U   -   M A I T R E");
-    LOG_INFO("===============================================");
+    LOG_INFO("=====================================================");
+    LOG_INFO("   E X P L O R A T I O N   D U   R E S E A U   -   M A I T R E");
+    LOG_INFO("=====================================================");
     LOG_INFO("DebugLevel initial = %u", DEBUG_LEVEL);
 
-    // -----------------------------------------------------------------------
-    // INITIALISATION DES MODULES
-    // -----------------------------------------------------------------------
+    /* ---------------------------------------------------------------
+     * INITIALISATION DES MODULES
+     * ------------------------------------------------------------- */
+
     LOG_INFO("Initialisation ERM_Maitre...");
     ERM_setup();
 

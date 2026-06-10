@@ -29,33 +29,35 @@ void ERS_begin()
 
     // -----------------------------------------------------------------------
     // Tâche de réception des heartbeats
+    // Priorité 4 → importante mais ne doit jamais préempter taskDcc (prio 5)
     // -----------------------------------------------------------------------
     BaseType_t ok1 = xTaskCreate(
         ERS_TaskRx,
         "ERS_RX",
         4096,
         nullptr,
-        6,
+        4,          // ★ priorité corrigée
         nullptr);
 
     if (ok1 == pdPASS)
-        LOG_INFO("ERS → tâche ERS_RX créée (prio 6)");
+        LOG_INFO("ERS → tâche ERS_RX créée (prio 4)");
     else
         LOG_ERROR("ERS → échec création tâche ERS_RX");
 
     // -----------------------------------------------------------------------
     // Tâche de supervision (timeouts)
+    // Priorité 2 → cadence lente, ne doit gêner aucune tâche critique
     // -----------------------------------------------------------------------
     BaseType_t ok2 = xTaskCreate(
         ERS_TaskSupervision,
         "ERS_SUP",
         4096,
         nullptr,
-        5,
+        2,          // ★ priorité corrigée
         nullptr);
 
     if (ok2 == pdPASS)
-        LOG_INFO("ERS → tâche ERS_SUP créée (prio 5)");
+        LOG_INFO("ERS → tâche ERS_SUP créée (prio 2)");
     else
         LOG_ERROR("ERS → échec création tâche ERS_SUP");
 

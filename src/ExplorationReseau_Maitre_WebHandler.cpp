@@ -1,8 +1,25 @@
+/*
+ * ExplorationReseau_Maitre_WebHandler.cpp
+ *
+ * 🎯 Rôle
+ * Gestion du serveur HTTP + WebSocket de la Carte Maîtresse.
+ *
+ * Ce module assure :
+ *   • la communication WebSocket avec l’interface utilisateur
+ *   • l’envoi d’états (CAN, satellites, paramètres…)
+ *   • la réception des commandes Web (WIFI, EXPLORATION, STOP, CLEAR STOP…)
+ *
+ * Depuis la refonte STOP :
+ *   → Toute la logique STOP/CLEAR STOP est centralisée dans ERM_StopService.
+ *   → WebHandler ne construit plus de trames CAN STOP/CLEAR STOP.
+ */
+
 #include "ExplorationReseau_Maitre_WebHandler.h"
 #include "ExplorationReseau_Maitre_Settings.h"
 #include "ExplorationReseau_Maitre_SatManager.h"
 #include "ExplorationReseau_Maitre_CanService.h"
 #include "ExplorationReseau_Maitre_Config.h"
+#include "ExplorationReseau_Maitre_StopService.h"
 #include "Variables.h"
 
 #include "Debug.h"
@@ -12,26 +29,22 @@ extern ERM_SatManager satManager;
 extern ERM_CanService canService;
 extern bool g_isTestMode;
 
-// États globaux (pour logs UI)
+// États globaux (UI)
 extern volatile uint8_t g_stopState;
 extern volatile uint8_t g_saveState;
 extern volatile uint8_t g_restartState;
 
-/*
- * ExplorationReseau_Maitre_WebHandler.cpp
- */
-
-// ---------------------------------------------------------------------------
-// CONSTRUCTEUR
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * 🧩 CONSTRUCTEUR
+ * ------------------------------------------------------------------------- */
 ERM_WebHandler::ERM_WebHandler(ERM_CanService *canService)
     : _server(nullptr), _ws(nullptr), _can(canService)
 {
 }
 
-// ---------------------------------------------------------------------------
-// INITIALISATION
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * 🚀 INITIALISATION DU SERVEUR WEB + WEBSOCKET
+ * ------------------------------------------------------------------------- */
 void ERM_WebHandler::init(uint16_t webPort)
 {
     LOG_INFO("ERM_WebHandler → initialisation (port %u)", webPort);
@@ -61,9 +74,9 @@ void ERM_WebHandler::loop()
     _ws->cleanupClients();
 }
 
-// ---------------------------------------------------------------------------
-// PUSH WEBSOCKET AUTOMATIQUE
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * 📡 PUSH WEBSOCKET AUTOMATIQUE (état complet)
+ * ------------------------------------------------------------------------- */
 void ERM_WebHandler::pushStatus()
 {
     StaticJsonDocument<2048> doc;
@@ -104,9 +117,9 @@ void ERM_WebHandler::pushStatus()
     _ws->textAll(json);
 }
 
-// ---------------------------------------------------------------------------
-// ENVOI D’UN LOG AU DASHBOARD
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * 📝 ENVOI D’UN LOG AU DASHBOARD
+ * ------------------------------------------------------------------------- */
 void ERM_WebHandler::pushLog(const char *type, const char *msg)
 {
     StaticJsonDocument<256> doc;
@@ -118,9 +131,9 @@ void ERM_WebHandler::pushLog(const char *type, const char *msg)
     _ws->textAll(json);
 }
 
-// ---------------------------------------------------------------------------
-// ENVOI D’UNE FRAME CAN AU DASHBOARD
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * 📨 ENVOI D’UNE TRAME CAN AU DASHBOARD
+ * ------------------------------------------------------------------------- */
 void ERM_WebHandler::pushCanFrame(const CanMsg &msg, const char *type)
 {
     StaticJsonDocument<256> doc;
@@ -142,9 +155,9 @@ void ERM_WebHandler::pushCanFrame(const CanMsg &msg, const char *type)
     _ws->textAll(json);
 }
 
-// ---------------------------------------------------------------------------
-// ÉVÉNEMENTS WEBSOCKET
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * 🎧 ÉVÉNEMENTS WEBSOCKET (réception commandes UI)
+ * ------------------------------------------------------------------------- */
 void ERM_WebHandler::ERM_wsEvent(AsyncWebSocket *server,
                                  AsyncWebSocketClient *client,
                                  AwsEventType type,
@@ -177,6 +190,10 @@ void ERM_WebHandler::ERM_wsEvent(AsyncWebSocket *server,
         }
 
         String message = (char *)data;
+
+        /* -----------------------------------------------------------
+         * COMMANDES WEB
+         * --------------------------------------------------------- */
 
         // WIFI
         if (message.indexOf("wifi_on") >= 0)
@@ -242,12 +259,16 @@ void ERM_WebHandler::ERM_wsEvent(AsyncWebSocket *server,
             pushStatus();
         }
 
+        /* -----------------------------------------------------------
+         * STOP / CLEAR STOP (nouvelle gestion centralisée)
+         * --------------------------------------------------------- */
+
         // CLEAR STOP
         if (message.indexOf("clear_stop") >= 0)
         {
             g_stopState = 0;
-            _can->sendMessage(CanMsg(uint16_t(PROTOCOLCAN_ID_CLEAR_STOP), {}));
-            pushLog("INFO", "CLEAR STOP envoyé");
+            ERM_StopService::clearStop();   // ← centralisé
+            pushLog("INFO", "CLEAR STOP demandé (Web)");
             pushStatus();
         }
 
@@ -255,8 +276,8 @@ void ERM_WebHandler::ERM_wsEvent(AsyncWebSocket *server,
         else if (message.indexOf("stop") >= 0)
         {
             g_stopState = 1;
-            _can->sendMessage(CanMsg(uint16_t(PROTOCOLCAN_ID_STOP), {}));
-            pushLog("WARN", "STOP envoyé");
+            ERM_StopService::triggerStop(); // ← centralisé
+            pushLog("WARN", "STOP demandé (Web)");
             pushStatus();
         }
     }
@@ -264,9 +285,9 @@ void ERM_WebHandler::ERM_wsEvent(AsyncWebSocket *server,
     }
 }
 
-// ---------------------------------------------------------------------------
-// ROUTES HTTP
-// ---------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+ * 🌐 ROUTES HTTP
+ * ------------------------------------------------------------------------- */
 void ERM_WebHandler::ERM_route()
 {
     LOG_INFO("ERM_WebHandler → configuration des routes HTTP");

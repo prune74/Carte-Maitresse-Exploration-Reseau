@@ -4,15 +4,25 @@
 #include "CanBus.h"
 #include "Variables.h"
 
-// ---------------------------------------------------------------------------
-// Classe ERM_CanService
-// Service CAN principal de la Carte Maîtresse d’Exploration du Réseau.
-// Ce module gère :
-//   - la réception et l’analyse des trames CAN
-//   - la supervision du bus (détection silence/erreur)
-//   - l’envoi de commandes vers les satellites
-//   - les interactions avec l’interface Web
-// ---------------------------------------------------------------------------
+/*
+ * ERM_CanService.h
+ *
+ * 🎯 Rôle
+ * Service CAN principal de la Carte Maîtresse d’Exploration du Réseau (ERM).
+ *
+ * Ce module gère :
+ *   • la réception et l’analyse des trames CAN
+ *   • la supervision du bus (détection silence/erreur)
+ *   • l’envoi de commandes vers les satellites
+ *   • les interactions Web → CAN
+ *
+ * Conception :
+ *   • réception non bloquante
+ *   • envoi CAN sécurisé
+ *   • supervision déterministe
+ *   • aucune allocation dynamique
+ */
+
 class ERM_CanService
 {
 public:
@@ -30,7 +40,7 @@ public:
     uint32_t lastRxAgeMs() const;
     bool isCanOK() const { return _canOK; }
 
-    // Accès à la dernière trame reçue (utilisé par la surveillance)
+    // Accès à la dernière trame reçue (utilisé par ERS)
     bool getLastFrame(CanMsg &msg);
 
     // Envoi public d’une trame CAN

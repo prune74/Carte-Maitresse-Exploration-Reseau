@@ -1,19 +1,22 @@
 /*
  * DCC2CAN_Cli.cpp
  *
+ * 🎯 Rôle
  * Interface CLI série du module DCC2CAN.
  *
- * Cette interface permet d’interagir directement avec le module via le port
- * série. Elle est conçue pour fournir un diagnostic rapide du décodeur DCC
- * et pour exécuter quelques commandes de maintenance.
+ * Cette interface permet d’interagir avec le module via le port série pour :
+ *   • afficher les statistiques du décodeur DCC
+ *   • ajuster le niveau de debug
+ *   • redémarrer l’ESP32
  *
  * Le CLI est volontairement minimal :
- *   - aucune commande liée au Booster
- *   - aucune commande liée au sniffer CAN
- *   - aucune commande bloquante
+ *   • aucune commande liée au Booster
+ *   • aucune commande liée au sniffer CAN
+ *   • aucune commande bloquante
  *
- * Le module s’intègre naturellement dans la boucle FreeRTOS et ne perturbe
- * jamais les tâches temps réel du décodeur.
+ * 🛡️ Sécurité temps réel
+ * Le CLI ne doit jamais perturber les tâches critiques (DCC, CAN).
+ * Les logs détaillés sont protégés via LOG_CRITICAL_DCC.
  */
 
 #include "DCC2CAN_Cli.h"
@@ -23,23 +26,16 @@
 static String input;
 
 /* ---------------------------------------------------------------------------
-   STRUCTURE D’UNE COMMANDE CLI
-   ---------------------------------------------------------------------------
-   Chaque commande est définie par :
-     - un nom (chaîne)
-     - un handler (fonction appelée lorsque la commande est reconnue)
---------------------------------------------------------------------------- */
+ * STRUCTURE D’UNE COMMANDE CLI
+ * ------------------------------------------------------------------------- */
 struct CliCommand {
     const char *name;
     void (*handler)(const String &args);
 };
 
 /* ---------------------------------------------------------------------------
-   HANDLERS DES COMMANDES
-   ---------------------------------------------------------------------------
-   Chaque handler reçoit la chaîne d’arguments (souvent vide) et exécute
-   l’action correspondante.
---------------------------------------------------------------------------- */
+ * HANDLERS DES COMMANDES
+ * ------------------------------------------------------------------------- */
 
 // Affiche les statistiques du décodeur DCC
 void cmd_stats(const String &)
@@ -59,11 +55,12 @@ void cmd_reset(const String &)
     ESP.restart();
 }
 
-// Active le mode debug VERBOSE
+// Active le mode debug VERBOSE (sécurisé)
 void cmd_debug_on(const String &)
 {
+    // Utilise la fonction sécurisée du module Debug
     DEBUG_LEVEL = DEBUG_VERBOSE;
-    LOG_INFO("Debug CLI → mode VERBOSE activé");
+    LOG_INFO("Debug CLI → mode VERBOSE demandé");
 }
 
 // Active uniquement les logs d’erreur
@@ -74,10 +71,8 @@ void cmd_debug_off(const String &)
 }
 
 /* ---------------------------------------------------------------------------
-   TABLEAU DES COMMANDES DISPONIBLES
-   ---------------------------------------------------------------------------
-   Le dispatcher parcourt ce tableau pour identifier la commande reçue.
---------------------------------------------------------------------------- */
+ * TABLEAU DES COMMANDES DISPONIBLES
+ * ------------------------------------------------------------------------- */
 static const CliCommand commands[] = {
     { "stats",     cmd_stats     },
     { "reset",     cmd_reset     },
@@ -86,11 +81,8 @@ static const CliCommand commands[] = {
 };
 
 /* ---------------------------------------------------------------------------
-   DISPATCHER : IDENTIFICATION ET EXÉCUTION D’UNE COMMANDE
-   ---------------------------------------------------------------------------
-   Le dispatcher compare la chaîne reçue avec chaque entrée du tableau.
-   Si une correspondance est trouvée, le handler associé est exécuté.
---------------------------------------------------------------------------- */
+ * DISPATCHER : IDENTIFICATION ET EXÉCUTION D’UNE COMMANDE
+ * ------------------------------------------------------------------------- */
 static bool Cli_dispatch(const String &cmd)
 {
     for (auto &c : commands)
@@ -109,10 +101,8 @@ static bool Cli_dispatch(const String &cmd)
 }
 
 /* ---------------------------------------------------------------------------
-   INITIALISATION DU MODULE CLI
-   ---------------------------------------------------------------------------
-   Réservations mémoire et message d’accueil.
---------------------------------------------------------------------------- */
+ * INITIALISATION DU MODULE CLI
+ * ------------------------------------------------------------------------- */
 void Cli_begin()
 {
     input.reserve(64);
@@ -120,12 +110,10 @@ void Cli_begin()
 }
 
 /* ---------------------------------------------------------------------------
-   BOUCLE PRINCIPALE DU CLI
-   ---------------------------------------------------------------------------
-   Cette fonction doit être appelée régulièrement dans la boucle FreeRTOS.
-   Elle lit les caractères reçus sur le port série et déclenche l’exécution
-   d’une commande lorsqu’une ligne complète est détectée.
---------------------------------------------------------------------------- */
+ * BOUCLE PRINCIPALE DU CLI
+ *
+ * À appeler régulièrement dans la boucle FreeRTOS.
+ * ------------------------------------------------------------------------- */
 void Cli_task()
 {
     while (Serial.available())
@@ -142,7 +130,7 @@ void Cli_task()
             input = "";
             cmd.trim();
 
-            LOG_VERBOSE("CLI → commande reçue : %s", cmd.c_str());
+            LOG_CRITICAL_DCC("CLI → commande reçue : %s", cmd.c_str());
             Cli_dispatch(cmd);
             return;
         }

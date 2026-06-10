@@ -21,7 +21,7 @@ est défini séparément dans ExplorationReseau_Protocol.h.
 /* ---------------------------------------------------------------------------
  * Informations projet
  * --------------------------------------------------------------------------- */
-#define PROJECT "Carte Maitresse Exploration Reseau"
+#define PROJECT "Carte Maîtresse Exploration Réseau"
 #define VERSION "v1.0"
 
 /* ---------------------------------------------------------------------------

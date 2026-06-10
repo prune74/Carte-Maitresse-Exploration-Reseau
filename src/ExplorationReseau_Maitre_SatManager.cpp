@@ -20,7 +20,6 @@
 // ---------------------------------------------------------------------------
 // CONSTRUCTEUR
 // ---------------------------------------------------------------------------
-// Initialise tous les slots satellites avec NO_ID.
 ERM_SatManager::ERM_SatManager()
 {
     for (uint8_t i = 0; i < NB_SAT; i++)
@@ -38,8 +37,7 @@ void ERM_SatManager::begin()
 // ---------------------------------------------------------------------------
 // BOUCLE PRINCIPALE
 // ---------------------------------------------------------------------------
-// Pour l’instant, aucune supervision interne n’est nécessaire.
-// La surveillance est effectuée par ERM_Surveillance.
+// Supervision déléguée à ERS. Rien à faire ici.
 void ERM_SatManager::loop()
 {
     // Supervision externe (ERS)
@@ -48,7 +46,6 @@ void ERM_SatManager::loop()
 // ---------------------------------------------------------------------------
 // AJOUT / MISE À JOUR D’UN SATELLITE
 // ---------------------------------------------------------------------------
-// Enregistre un satellite s’il est nouveau, ou ignore s’il existe déjà.
 void ERM_SatManager::addOrUpdate(uint16_t idSat)
 {
     if (idSat == NO_ID)
@@ -69,8 +66,8 @@ void ERM_SatManager::addOrUpdate(uint16_t idSat)
     {
         if (_sats[i].id == NO_ID)
         {
-            _sats[i].id = idSat;
-            _sats[i].online = true;
+            _sats[i].id       = idSat;
+            _sats[i].online   = true;
             _sats[i].lastSeen = millis();
 
             LOG_INFO("SAT %u → découvert", idSat);
@@ -84,7 +81,6 @@ void ERM_SatManager::addOrUpdate(uint16_t idSat)
 // ---------------------------------------------------------------------------
 // HEARTBEAT
 // ---------------------------------------------------------------------------
-// Met à jour l’état d’un satellite lorsqu’un heartbeat est reçu.
 void ERM_SatManager::updateHeartbeat(uint16_t idSat)
 {
     for (uint8_t i = 0; i < NB_SAT; i++)
@@ -94,26 +90,25 @@ void ERM_SatManager::updateHeartbeat(uint16_t idSat)
             bool wasOffline = !_sats[i].online;
 
             _sats[i].lastSeen = millis();
-            _sats[i].online = true;
+            _sats[i].online   = true;
 
             if (wasOffline)
                 LOG_INFO("SAT %u → ONLINE (heartbeat)", idSat);
             else
-                LOG_VERBOSE("SAT %u → heartbeat", idSat);
+                LOG_CRITICAL_DCC("SAT %u → heartbeat", idSat);
 
             return;
         }
     }
 
     // Satellite inconnu → découverte automatique
-    LOG_VERBOSE("SAT %u → heartbeat inconnu → ajout", idSat);
+    LOG_CRITICAL_DCC("SAT %u → heartbeat inconnu → ajout", idSat);
     addOrUpdate(idSat);
 }
 
 // ---------------------------------------------------------------------------
 // SUPERVISION DES TIMEOUTS
 // ---------------------------------------------------------------------------
-// Déclare un satellite OFFLINE si aucun heartbeat n’a été reçu depuis timeoutMs.
 void ERM_SatManager::checkTimeouts(uint32_t timeoutMs)
 {
     uint32_t now = millis();
@@ -136,7 +131,6 @@ void ERM_SatManager::checkTimeouts(uint32_t timeoutMs)
 // ---------------------------------------------------------------------------
 // ACCÈS PAR ID
 // ---------------------------------------------------------------------------
-// Retourne un pointeur vers un satellite, ou nullptr si absent.
 ERM_Satellite *ERM_SatManager::getById(uint16_t idSat)
 {
     for (uint8_t i = 0; i < NB_SAT; i++)
@@ -150,7 +144,6 @@ ERM_Satellite *ERM_SatManager::getById(uint16_t idSat)
 // ---------------------------------------------------------------------------
 // NOMBRE DE SATELLITES ENREGISTRÉS
 // ---------------------------------------------------------------------------
-// Compte les satellites ayant un ID valide.
 uint8_t ERM_SatManager::count() const
 {
     uint8_t c = 0;
@@ -163,7 +156,6 @@ uint8_t ERM_SatManager::count() const
 // ---------------------------------------------------------------------------
 // WATCHDOG : DÉTECTION D’UN SATELLITE OFFLINE
 // ---------------------------------------------------------------------------
-// Retourne true si au moins un satellite est offline.
 bool ERM_SatManager::hasOfflineSatellite(uint16_t &offlineId) const
 {
     for (uint8_t i = 0; i < NB_SAT; i++)

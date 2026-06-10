@@ -4,23 +4,23 @@
  * 🎯 Rôle
  * Gestion des entrées physiques de la Carte Maîtresse d’Exploration du Réseau.
  *
- * Ce module supervise notamment le bouton CLEAR STOP, permettant à l’opérateur
- * de lever manuellement un STOP global (0x202) sans passer par l’interface Web.
+ * Ce module supervise le bouton CLEAR STOP :
+ *   • Appui court → demande de levée du STOP global (ID 0x202)
+ *   • Anti-rebond logiciel léger
+ *   • Lecture non bloquante
+ *
+ * La logique STOP/CLEAR STOP est centralisée dans ERM_StopService.
+ * Le bouton ne peut lever STOP que si STOP est réellement actif.
  */
 
 #include "ExplorationReseau_Maitre_InputService.h"
-#include "Variables.h"
 #include "ExplorationReseau_Maitre_Pins.h"
-#include "ExplorationReseau_Maitre_CanService.h"
-#include "ExplorationReseau_Protocol.h"
-#include "ExplorationReseau_Maitre_Config.h"
-
+#include "ExplorationReseau_Maitre_StopService.h"
 #include "Debug.h"
 
-// ---------------------------------------------------------------------------
-// Initialisation du service d’entrées
-// ---------------------------------------------------------------------------
-// Configure le bouton CLEAR STOP en entrée avec résistance pull-up interne.
+/* ---------------------------------------------------------------------------
+ * 🟦 INITIALISATION DU SERVICE D’ENTRÉES
+ * ------------------------------------------------------------------------- */
 void ERM_InputService::begin()
 {
     pinMode(PIN_BTN_CLEAR_STOP, INPUT_PULLUP);
@@ -28,10 +28,15 @@ void ERM_InputService::begin()
     LOG_INFO("ERM_InputService → bouton CLEAR STOP initialisé (pull-up)");
 }
 
-// ---------------------------------------------------------------------------
-// Boucle de supervision du bouton CLEAR STOP
-// ---------------------------------------------------------------------------
-// Détection d’un front descendant (pression du bouton) avec anti-rebond simple.
+/* ---------------------------------------------------------------------------
+ * 🟩 BOUCLE DE SUPERVISION DU BOUTON CLEAR STOP
+ *
+ * Détection d’un front descendant (pression du bouton) avec anti-rebond.
+ * Aucun traitement lourd, aucune attente bloquante.
+ *
+ * CLEAR STOP n’est envoyé que si STOP est actif.
+ * L’envoi CAN est délégué à ERM_StopService.
+ * ------------------------------------------------------------------------- */
 void ERM_InputService::loop()
 {
     bool cur = digitalRead(PIN_BTN_CLEAR_STOP);
@@ -48,13 +53,16 @@ void ERM_InputService::loop()
         // Front descendant → bouton pressé
         if (_prevBtn == true && cur == false)
         {
-            // Construction d’une trame CLEAR STOP (11 bits)
-            CanMsg msg(uint16_t(PROTOCOLCAN_ID_CLEAR_STOP), {});
-
-            // Envoi via le service CAN
-            canService.sendMessage(msg);
-
-            LOG_INFO("[BTN] CLEAR STOP envoyé (bouton physique)");
+            // Vérifie si STOP est actif avant CLEAR STOP
+            if (ERM_StopService::isStopActive())
+            {
+                ERM_StopService::clearStop();
+                LOG_INFO("[BTN] CLEAR STOP demandé (STOP actif)");
+            }
+            else
+            {
+                LOG_INFO("[BTN] CLEAR STOP ignoré (STOP non actif)");
+            }
         }
 
         _prevBtn = cur;

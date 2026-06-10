@@ -1,10 +1,28 @@
 #include "ExplorationReseau_Maitre_Settings.h"
 #include "Debug.h"
 
+/*
+ * ExplorationReseau_Maitre_Settings.cpp
+ *
+ * 🎯 Rôle
+ * Gestion des paramètres persistants de la Carte Maîtresse ERM.
+ *
+ * Les paramètres sont stockés dans /settings.json via SPIFFS :
+ *   • WiFi (SSID + mot de passe)
+ *   • activation exploration
+ *   • profil de voie (N / HO)
+ *   • mode test (FakeDCC + loopback CAN)
+ *
+ * Le module fournit :
+ *   • begin()      → montage SPIFFS
+ *   • readFile()   → chargement JSON
+ *   • writeFile()  → sauvegarde JSON
+ *   • getters      → valeurs par défaut si vide
+ */
+
 // ---------------------------------------------------------------------------
 // VARIABLES STATIQUES
 // ---------------------------------------------------------------------------
-// Paramètres persistants de la Carte Maîtresse (chargés depuis settings.json)
 bool     ERM_Settings::WIFI_ON        = true;
 bool     ERM_Settings::EXPLORATION_ON = true;
 uint16_t ERM_Settings::idNode         = NO_ID;
@@ -14,13 +32,12 @@ String   ERM_Settings::WIFI_PSW       = "";
 
 uint8_t  ERM_Settings::track_profile  = 0;   // 0 = N (12V), 1 = HO (15V)
 
-// Mode test : loopback CAN + FakeDCC
+// Mode test : FakeDCC + loopback CAN
 bool     ERM_Settings::MODE_TEST      = true;
 
 // ---------------------------------------------------------------------------
 // INITIALISATION SPIFFS
 // ---------------------------------------------------------------------------
-// Monte le système de fichiers SPIFFS pour accéder à settings.json.
 void ERM_Settings::begin()
 {
     if (!SPIFFS.begin(true))
@@ -35,8 +52,6 @@ void ERM_Settings::begin()
 // ---------------------------------------------------------------------------
 // LECTURE DU FICHIER settings.json
 // ---------------------------------------------------------------------------
-// Charge les paramètres persistants depuis le fichier JSON.
-// En cas d’erreur, les valeurs par défaut sont conservées.
 void ERM_Settings::readFile()
 {
     File file = SPIFFS.open("/settings.json", "r");
@@ -82,7 +97,6 @@ void ERM_Settings::readFile()
 // ---------------------------------------------------------------------------
 // ÉCRITURE DU FICHIER settings.json
 // ---------------------------------------------------------------------------
-// Sauvegarde les paramètres persistants dans le fichier JSON.
 void ERM_Settings::writeFile()
 {
     StaticJsonDocument<512> doc;

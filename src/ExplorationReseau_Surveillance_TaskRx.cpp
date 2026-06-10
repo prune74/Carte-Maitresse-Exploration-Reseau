@@ -6,7 +6,8 @@
  * des satellites, et de mettre à jour le module de Surveillance ERS.
  *
  * Cette tâche tourne à haute fréquence pour garantir une détection rapide
- * des pertes de communication.
+ * des pertes de communication. Elle doit rester légère, non bloquante,
+ * et ne jamais perturber les tâches temps réel critiques (DCC2CAN).
  */
 
 #include "ExplorationReseau_Surveillance_Watchdog.h"
@@ -21,13 +22,17 @@ extern ERM_CanService canService;
 
 void ERS_TaskRx(void *pv)
 {
+    (void)pv;
+
     LOG_INFO("ERS RX → tâche démarrée (période %u ms)", ERS_RX_PERIOD_MS);
 
     CanMsg msg;
 
     for (;;)
     {
-        // Lecture non bloquante du dernier message CAN
+        /* -----------------------------------------------------------
+         * Lecture non bloquante du dernier message CAN
+         * --------------------------------------------------------- */
         if (canService.getLastFrame(msg))
         {
             // Heartbeat ERM (ID 0x200)
@@ -39,11 +44,14 @@ void ERS_TaskRx(void *pv)
 
                 ERS_registerHeartbeat(satId);
 
-                LOG_VERBOSE("ERS RX → heartbeat de %u", satId);
+                // Log sécurisé : jamais en mode réel
+                LOG_CRITICAL_DCC("ERS RX → heartbeat de %u", satId);
             }
         }
 
-        // Période très courte
+        /* -----------------------------------------------------------
+         * Cadence fixe (haute fréquence)
+         * --------------------------------------------------------- */
         vTaskDelay(pdMS_TO_TICKS(ERS_RX_PERIOD_MS));
     }
 }

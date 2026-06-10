@@ -1,17 +1,27 @@
 /*
  * DCC2CAN_TaskCan.cpp
  *
- * Tâche FreeRTOS responsable de l’envoi des trames CAN contenant
- * le bit DCC courant (bit logique + phase).
+ * 🎯 Rôle
+ * Tâche FreeRTOS responsable de l’émission des trames CAN contenant
+ * l’état DCC courant (bit logique + phase). Cette tâche constitue le
+ * lien entre :
+ *   • l’état logique du Booster (BoosterState)
+ *   • le bus CAN Booster (via CanBooster_sendDccBit)
  *
- * Cette tâche constitue le lien direct entre :
- *   - le décodeur DCC (qui produit les événements)
- *   - l’état logique du Booster (géré par BoosterState)
- *   - le bus CAN Booster (via CanBooster_sendDccBit)
+ * Le principe est simple :
+ *   - toutes les 2 ms, la tâche demande à BoosterState d’envoyer
+ *     le bit DCC courant sur le bus CAN0
+ *   - BoosterState_sendCan() applique sa logique interne :
+ *        • anti-spam (envoi uniquement si changement)
+ *        • respect de l’état RUNNING / STOP
  *
- * La cadence fixe de 2 ms garantit un flux CAN stable et régulier,
- * tout en laissant BoosterState_sendCan() décider s’il faut réellement
- * envoyer une trame (anti-spam CAN).
+ * 🛡️ Sécurité temps réel
+ * Cette tâche n’est PAS critique (contrairement à taskDcc). Elle tourne
+ * à faible priorité et ne doit jamais bloquer la chaîne DCC → état.
+ *
+ * Les logs sont protégés via LOG_CRITICAL_DCC :
+ *   • actifs uniquement en mode test + DEBUG_VERBOSE
+ *   • totalement désactivés en mode réel
  */
 
 #include "DCC2CAN_TaskCan.h"
@@ -19,14 +29,17 @@
 #include "Debug.h"
 
 /* ---------------------------------------------------------------------------
-   TÂCHE CAN (TX)
-   ---------------------------------------------------------------------------
-   Cette tâche tourne toutes les 2 ms et demande à BoosterState d’envoyer
-   le bit courant sur le bus CAN. BoosterState_sendCan() applique ensuite
-   sa logique interne :
-     - envoi uniquement si bit/phase ont changé
-     - blocage si le système n’est pas en RUNNING
---------------------------------------------------------------------------- */
+ * 🧵 TÂCHE CAN (TX)
+ *
+ * Cadence : 2 ms
+ * Priorité : inférieure à taskDcc
+ *
+ * Cette tâche :
+ *   - appelle BoosterState_sendCan() pour émettre le bit courant
+ *   - laisse la logique interne décider si un envoi est nécessaire
+ *   - ne fait aucun traitement lourd
+ *   - ne bloque jamais la chaîne DCC
+ * ------------------------------------------------------------------------- */
 void taskCan(void *pv)
 {
     (void)pv;
@@ -35,9 +48,22 @@ void taskCan(void *pv)
 
     for (;;)
     {
-        BoosterState_sendCan();   // envoi du bit DCC courant
-        LOG_VERBOSE("CAN TX → bit envoyé");
+        /* -----------------------------------------------------------
+         * Demande à BoosterState d’émettre le bit DCC courant.
+         * La fonction applique :
+         *   - anti-spam CAN
+         *   - respect de l’état RUNNING
+         *   - envoi via CanBooster_sendDccBit()
+         * --------------------------------------------------------- */
+        BoosterState_sendCan();
 
-        vTaskDelay(pdMS_TO_TICKS(2));  // cadence fixe 2 ms
+        // Log sécurisé : actif uniquement en mode test + VERBOSE
+        LOG_CRITICAL_DCC("CAN TX → bit envoyé");
+
+        /* -----------------------------------------------------------
+         * Cadence fixe 2 ms
+         * Cette tâche n’est pas critique : un delay est acceptable.
+         * --------------------------------------------------------- */
+        vTaskDelay(pdMS_TO_TICKS(2));
     }
 }

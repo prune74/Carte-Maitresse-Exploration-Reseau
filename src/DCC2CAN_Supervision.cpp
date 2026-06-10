@@ -1,18 +1,23 @@
 /*
  * DCC2CAN_Supervision.cpp
  *
+ * 🎯 Rôle
  * Tâche FreeRTOS chargée de superviser la présence du signal DCC.
  *
- * Son rôle est simple mais essentiel :
- *   - attendre le premier événement DCC avant d'activer la supervision
- *   - surveiller l’absence prolongée d’événements (perte du signal)
- *   - gérer la transition entre RUNNING et RECOVERY
- *   - rétablir l’état RUNNING lorsque le signal revient
+ * Cette supervision est indépendante du décodeur et du CAN. Elle repose
+ * uniquement sur :
+ *   • g_state.lastEventTime  → timestamp du dernier événement DCC
+ *   • g_state.status         → état logique du Booster
  *
- * Cette supervision fonctionne indépendamment du décodeur et du CAN.
- * Elle s’appuie uniquement sur :
- *   - g_state.lastEventTime
- *   - g_state.status
+ * Objectifs :
+ *   - attendre le premier événement avant d’activer la supervision
+ *   - détecter une absence prolongée de signal (failsafe)
+ *   - gérer la transition RUNNING → RECOVERY
+ *   - repasser en RUNNING lorsque le signal revient
+ *
+ * 🛡️ Sécurité temps réel
+ * Cette tâche tourne à faible priorité (20 ms). Elle ne doit jamais
+ * bloquer ni interférer avec taskDcc ou taskCan.
  */
 
 #include "DCC2CAN_Supervision.h"
@@ -20,11 +25,16 @@
 #include "Debug.h"
 
 /* ---------------------------------------------------------------------------
-   TÂCHE DE SUPERVISION DU SIGNAL DCC
-   ---------------------------------------------------------------------------
-   Cette tâche tourne toutes les 20 ms et vérifie le temps écoulé depuis
-   le dernier événement DCC. Elle applique ensuite la logique de failsafe.
---------------------------------------------------------------------------- */
+ * 🧵 TÂCHE DE SUPERVISION DU SIGNAL DCC
+ *
+ * Cadence : 20 ms
+ * Priorité : faible
+ *
+ * Fonctionnement :
+ *   - phase 1 : attendre le premier événement DCC
+ *   - phase 2 : surveiller l’absence de signal
+ *   - basculer entre RUNNING et RECOVERY selon le timeout
+ * ------------------------------------------------------------------------- */
 void taskSupervision(void *pv)
 {
     (void)pv;
@@ -35,9 +45,9 @@ void taskSupervision(void *pv)
 
     for (;;)
     {
-        /* ---------------------------------------------------------------
-           ACTIVATION DE LA SUPERVISION
-           --------------------------------------------------------------- */
+        /* -----------------------------------------------------------
+         * PHASE 1 — Attente du premier événement DCC
+         * --------------------------------------------------------- */
         if (!supervisionActive)
         {
             if (g_state.lastEventTime != 0)
@@ -50,20 +60,24 @@ void taskSupervision(void *pv)
             continue;
         }
 
-        /* ---------------------------------------------------------------
-           SUPERVISION NORMALE
-           --------------------------------------------------------------- */
+        /* -----------------------------------------------------------
+         * PHASE 2 — Supervision normale
+         * --------------------------------------------------------- */
         uint32_t now = millis();
-        uint32_t dt = now - g_state.lastEventTime;
+        uint32_t dt  = now - g_state.lastEventTime;
 
-        // Perte du signal DCC
+        /* -------------------------------
+         * Perte du signal DCC
+         * ----------------------------- */
         if (dt > 800 && g_state.status == BSTATE_RUNNING)
         {
             LOG_WARN("⚠️  DCC LOST → aucun événement depuis %u ms", dt);
             g_state.status = BSTATE_RECOVERY;
         }
 
-        // Signal revenu
+        /* -------------------------------
+         * Signal revenu
+         * ----------------------------- */
         if (dt <= 800 && g_state.status == BSTATE_RECOVERY)
         {
             LOG_INFO("✅ DCC RECOVERED → signal revenu");

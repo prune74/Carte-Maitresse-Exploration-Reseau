@@ -4,9 +4,16 @@
  * 🎯 Rôle
  * Module central de la Surveillance ERS.
  *
- * Il surveille l’activité des satellites via leurs heartbeats CAN (0x200)
- * et déclenche automatiquement un STOP global (0x201) lorsqu’un satellite
+ * Il surveille l’activité des satellites via leurs heartbeats CAN (ID 0x200)
+ * et déclenche automatiquement un STOP global (ID 0x201) lorsqu’un satellite
  * devient silencieux.
+ *
+ * Le Watchdog ERS repose sur :
+ *   • SatManager (online/offline)
+ *   • une table interne des timestamps de heartbeats
+ *   • deux tâches FreeRTOS :
+ *        - ERS_TaskRx (prio 4) : réception des heartbeats
+ *        - ERS_TaskSupervision (prio 2) : analyse des timeouts
  */
 
 #include "ExplorationReseau_Surveillance_Watchdog.h"
@@ -22,8 +29,8 @@ extern ERM_SatManager satManager;
 extern ERM_CanService canService;
 
 /* ---------------------------------------------------------------------------
-   INITIALISATION
---------------------------------------------------------------------------- */
+ * 🧩 INITIALISATION
+ * ------------------------------------------------------------------------- */
 void ERS_init()
 {
     LOG_INFO("ERS → init interne OK");
@@ -40,8 +47,10 @@ void ERS_init()
 }
 
 /* ---------------------------------------------------------------------------
-   MISE À JOUR HEARTBEAT
---------------------------------------------------------------------------- */
+ * 📡 MISE À JOUR HEARTBEAT
+ *
+ * Appelée par ERS_TaskRx à chaque réception d’un heartbeat (ID 0x200).
+ * ------------------------------------------------------------------------- */
 void ERS_registerHeartbeat(uint16_t satId)
 {
     if (!ers_enabled)
@@ -60,12 +69,15 @@ void ERS_registerHeartbeat(uint16_t satId)
     ers_heartbeatCount++;
     ers_lastSatId = satId;
 
-    LOG_VERBOSE("ERS → heartbeat reçu de %u", satId);
+    // Log sécurisé : jamais actif en mode réel
+    LOG_CRITICAL_DCC("ERS → heartbeat reçu de %u", satId);
 }
 
 /* ---------------------------------------------------------------------------
-   STOP GLOBAL
---------------------------------------------------------------------------- */
+ * 🛑 STOP GLOBAL
+ *
+ * Envoie une trame CAN STOP (ID 0x201).
+ * ------------------------------------------------------------------------- */
 void ERS_triggerEmergencyStop()
 {
     CanMsg msg(uint16_t(PROTOCOLCAN_ID_STOP), {}); // ID = 0x201, DLC = 0
@@ -75,8 +87,11 @@ void ERS_triggerEmergencyStop()
 }
 
 /* ---------------------------------------------------------------------------
-   SUPERVISION
---------------------------------------------------------------------------- */
+ * 🛡️ SUPERVISION
+ *
+ * Appelée par ERS_TaskSupervision (prio 2).
+ * Analyse les timeouts et déclenche un STOP global si un satellite est OFFLINE.
+ * ------------------------------------------------------------------------- */
 void ERS_supervise()
 {
     if (!ers_enabled)
@@ -98,6 +113,6 @@ void ERS_supervise()
     }
     else
     {
-        LOG_VERBOSE("ERS → aucun satellite offline");
+        LOG_INFO("ERS → aucun satellite offline");
     }
 }
