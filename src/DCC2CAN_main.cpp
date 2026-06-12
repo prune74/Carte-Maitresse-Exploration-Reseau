@@ -1,7 +1,8 @@
 /*
  * DCC2CAN_main.cpp
  *
- * 🎯 Rôle
+ * Rôle
+ * ----
  * Point d’entrée du module DCC2CAN.
  *
  * Ce fichier orchestre l’initialisation de tous les sous-modules :
@@ -30,16 +31,16 @@
 #include "Debug.h"
 
 /* ---------------------------------------------------------------------------
- * 🚀 INITIALISATION DU MODULE DCC2CAN
+ * INITIALISATION DU MODULE DCC2CAN
  *
  * Cette fonction configure tous les sous-systèmes nécessaires au traitement
  * du signal DCC et à son émission sur le bus CAN Booster.
  *
- * ⚠️ Aucun traitement lourd ici : uniquement de l’initialisation.
+ * Aucun traitement lourd ici : uniquement de l’initialisation.
  * ------------------------------------------------------------------------- */
 void Booster_setup()
 {
-    LOG_INFO("DCC2CAN → Initialisation du module Booster");
+    LOG_INFO("DCC2CAN → Initialisation du module");
 
     /* ---------------------------------------------------------------
      * Gestion d’état
@@ -86,7 +87,7 @@ void Booster_setup()
 }
 
 /* ---------------------------------------------------------------------------
- * 🔁 BOUCLE PRINCIPALE
+ * BOUCLE PRINCIPALE
  *
  * La boucle principale est volontairement légère :
  *   • elle exécute la tâche CLI

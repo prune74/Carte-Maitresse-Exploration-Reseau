@@ -1,17 +1,19 @@
 /*
  * DCC2CAN_State.cpp
  *
- * 🎯 Rôle
- * Module centralisant l’état logique du flux DCC pour le module DCC2CAN.
+ * Rôle
+ * ----
+ * Module centralisant l’état logique du flux DCC pour la carte maître.
  *
- * Ce composant joue un rôle clé dans la chaîne de traitement :
+ * Ce composant :
  *   • mémorise le dernier événement DCC reçu
- *   • supervise la présence du signal DCC (failsafe)
- *   • fournit le bit courant au module CAN Booster
+ *   • supervise la présence du signal (failsafe)
+ *   • transmet au Booster :
+ *        - les bits DCC (bit + phase)
+ *        - les événements CUTOUT_START / CUTOUT_END
  *
- * Toutes les variables globales (état, mutex, compteurs…) sont regroupées
- * dans Variables.h/.cpp pour garantir une architecture claire, modulaire
- * et facilement testable.
+ * L’objectif est de permettre au Booster de reconstruire le signal DCC
+ * et de synchroniser parfaitement la fenêtre RailCom.
  */
 
 #include "DCC2CAN_State.h"
@@ -20,12 +22,7 @@
 #include "Debug.h"
 
 /* ---------------------------------------------------------------------------
- * 🧩 INITIALISATION DE L’ÉTAT DU BOOSTER
- *
- * Le mutex protège l’accès à g_state, partagé entre :
- *   • taskDcc()         → mise à jour depuis les événements DCC
- *   • taskCan()         → envoi du bit courant sur le bus CAN
- *   • taskSupervision() → surveillance du signal DCC
+ * INITIALISATION DE L’ÉTAT GLOBAL
  * ------------------------------------------------------------------------- */
 void BoosterState_init()
 {
@@ -34,12 +31,14 @@ void BoosterState_init()
 }
 
 /* ---------------------------------------------------------------------------
- * 🔄 MISE À JOUR DE L’ÉTAT DEPUIS UN ÉVÉNEMENT DCC
+ * MISE À JOUR DE L’ÉTAT DEPUIS UN ÉVÉNEMENT DCC
  *
- * Appelée par taskDcc() lorsqu’un événement DCC est reçu.
- * Copie l’événement dans l’état global et met à jour le timestamp.
+ * Appelée par taskDcc().
+ * - copie l’événement dans l’état global
+ * - met à jour le timestamp
+ * - transmet immédiatement les événements CUTOUT au Booster
  *
- * ⚠️ Zone critique : aucun log non protégé ici.
+ * ⚠️ Cette fonction doit rester ultra légère.
  * ------------------------------------------------------------------------- */
 void BoosterState_updateFromDcc(const volatile DccEvent &ev)
 {
@@ -53,20 +52,35 @@ void BoosterState_updateFromDcc(const volatile DccEvent &ev)
 
     xSemaphoreGive(gStateUpdateMutex);
 
-    // Log sécurisé : actif uniquement en mode test + VERBOSE
-    LOG_CRITICAL_DCC("BoosterState ← bit=%u phase=%u dt=%lu",
-                     ev.bit, ev.phase, (unsigned long)ev.dt_us);
+    // Log sécurisé (mode test uniquement)
+    LOG_CRITICAL_DCC("BoosterState ← bit=%u phase=%u dt=%lu type=%u",
+                     ev.bit, ev.phase, (unsigned long)ev.dt_us, ev.type);
+
+    /* ---------------------------------------------------------------
+     * TRANSMISSION IMMÉDIATE DES ÉVÉNEMENTS CUTOUT
+     *
+     * Le Booster doit recevoir ces événements dès qu’ils sont détectés
+     * pour synchroniser parfaitement la fenêtre RailCom.
+     * ------------------------------------------------------------- */
+    if (ev.type == DCC_EVT_CUTOUT_START)
+    {
+        CanBooster_sendCutout(0);   // 0 = CUTOUT_START
+    }
+    else if (ev.type == DCC_EVT_CUTOUT_END)
+    {
+        CanBooster_sendCutout(1);   // 1 = CUTOUT_END
+    }
 }
 
 /* ---------------------------------------------------------------------------
- * 📡 ENVOI CAN DU BIT COURANT
+ * ENVOI CAN DU BIT COURANT
  *
  * Appelée par taskCan().
- * Envoie le bit DCC courant au Booster uniquement si :
- *   • le système est en RUNNING
- *   • le bit ou la phase ont changé (anti-spam CAN)
+ * - envoie le bit DCC courant uniquement si :
+ *      • le système est en RUNNING
+ *      • le bit ou la phase ont changé (anti-spam)
  *
- * ⚠️ Zone critique : doit être ultra légère.
+ * ⚠️ Fonction critique : doit rester minimaliste.
  * ------------------------------------------------------------------------- */
 void BoosterState_sendCan()
 {
@@ -99,16 +113,13 @@ void BoosterState_sendCan()
 }
 
 /* ---------------------------------------------------------------------------
- * 🛡️ SUPERVISION DU SIGNAL DCC
+ * SUPERVISION DU SIGNAL DCC
  *
  * Appelée périodiquement par taskSupervision().
- * Détecte :
- *   • perte du signal (timeout)
- *   • passage en DCC_LOST
- *   • passage en RECOVERY
- *   • retour à RUNNING
+ * - détecte la perte du signal
+ * - gère les transitions RUNNING → LOST → RECOVERY
  *
- * ⚠️ Non critique : logs autorisés.
+ * Non critique : logs autorisés.
  * ------------------------------------------------------------------------- */
 void BoosterState_supervise()
 {
@@ -117,9 +128,7 @@ void BoosterState_supervise()
     uint32_t now = millis();
     uint32_t dt  = now - g_state.lastEventTime;
 
-    /* -------------------------------
-     * PERTE DU SIGNAL DCC
-     * ----------------------------- */
+    /* Perte du signal */
     if (dt > DCCB_FAILSAFE_TIMEOUT_MS)
     {
         if (g_state.status == BSTATE_RUNNING)
@@ -138,10 +147,7 @@ void BoosterState_supervise()
             }
         }
     }
-
-    /* -------------------------------
-     * SIGNAL REVENUE → RETOUR À RUNNING
-     * ----------------------------- */
+    /* Signal revenu */
     else
     {
         if (g_state.status != BSTATE_RUNNING)

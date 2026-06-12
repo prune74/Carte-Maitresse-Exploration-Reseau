@@ -3,12 +3,21 @@
  *
  * Interface publique du driver CAN Booster.
  *
- * Ce module assure l’envoi des trames CAN contenant :
- *   - le bit DCC logique (0 ou 1)
- *   - la phase du signal (0 ou 1)
+ * Ce module assure désormais l’envoi de deux types de trames CAN :
  *
- * Le bus CAN Booster est unidirectionnel pour DCC2CAN : émission uniquement.
- * Le driver utilise le contrôleur CAN interne de l’ESP32 via ACAN_ESP32.
+ *   1️⃣  Trames DCC BIT
+ *       - bit logique (0 ou 1)
+ *       - phase du signal (0 ou 1)
+ *
+ *   2️⃣  Trames CUTOUT
+ *       - CUTOUT_START  (0)
+ *       - CUTOUT_END    (1)
+ *
+ * L’objectif est de permettre au Booster de reconstruire le signal DCC
+ * et de synchroniser parfaitement la fenêtre RailCom sans avoir à
+ * deviner ou reconstruire le cutout localement.
+ *
+ * Le bus CAN Booster est unidirectionnel pour ce module : émission uniquement.
  */
 
 #pragma once
@@ -32,3 +41,13 @@ void CanBooster_begin();
    Retourne true si la trame a été envoyée avec succès.
 --------------------------------------------------------------------------- */
 bool CanBooster_sendDccBit(uint8_t bit, uint8_t phase);
+
+/* ---------------------------------------------------------------------------
+   ENVOI D’UN ÉVÉNEMENT CUTOUT SUR LE BUS CAN BOOSTER
+   ---------------------------------------------------------------------------
+   cutoutType :
+       0 → CUTOUT_START
+       1 → CUTOUT_END
+   Retourne true si la trame a été envoyée avec succès.
+--------------------------------------------------------------------------- */
+bool CanBooster_sendCutout(uint8_t cutoutType);

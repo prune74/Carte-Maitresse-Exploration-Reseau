@@ -17,10 +17,12 @@
 /* ---------------------------------------------------------------------------
    IDENTIFIANTS CAN
    ---------------------------------------------------------------------------
-   Les trames envoyées par le module DCC2CAN utilisent des identifiants
-   normalisés afin d’assurer une compatibilité parfaite avec les Boosters.
+   Deux types de trames sont envoyées :
+     - DCCB_CAN_ID_DCC_BIT  → bit logique + phase
+     - DCCB_CAN_ID_CUTOUT   → événements CUTOUT_START / CUTOUT_END
 --------------------------------------------------------------------------- */
 #define DCCB_CAN_ID_DCC_BIT     0x100   // Trame "bit DCC" (bit logique + phase)
+#define DCCB_CAN_ID_CUTOUT      0x101   // Trame "cutout" (start/end)
 
 /* ---------------------------------------------------------------------------
    TIMINGS DCC (NMRA)

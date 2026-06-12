@@ -1,7 +1,8 @@
 /*
  * DCC2CAN_FakeDcc.cpp
  *
- * 🎯 Rôle
+ * Rôle
+ * ----
  * Module de simulation du signal DCC.
  *
  * Ce composant génère artificiellement des événements DCC afin de permettre
@@ -17,6 +18,11 @@
  *   • le pipeline DCC → état → CAN
  *   • le Booster
  *   • les tâches FreeRTOS
+ *
+ * Remarque
+ * --------
+ * Le simulateur ne génère PAS de cutout. Le cutout est un phénomène analogique
+ * complexe, inutile pour les tests unitaires du pipeline numérique.
  */
 
 #include "DCC2CAN_FakeDcc.h"
@@ -31,7 +37,7 @@ bool DCC_FAKE_MODE = true;
 static QueueHandle_t q = nullptr;
 
 /* ---------------------------------------------------------------------------
- * 🚀 INITIALISATION DE LA SIMULATION
+ * INITIALISATION DE LA SIMULATION
  *
  * La simulation utilise la même queue que le décodeur réel.
  * Si la queue n’existe pas encore, la simulation ne peut pas fonctionner.
@@ -51,13 +57,13 @@ void FakeDcc_begin()
 }
 
 /* ---------------------------------------------------------------------------
- * ⏱️ TICK DE SIMULATION
+ * TICK DE SIMULATION
  *
  * Cette fonction doit être appelée régulièrement (par taskDcc en mode test).
  * Elle génère un bit DCC synthétique toutes les ~60 µs, ce qui correspond
  * à un bit 1 NMRA.
  *
- * ⚠️ Zone critique :
+ * Contraintes :
  *   • aucun traitement lourd
  *   • aucun delay
  *   • logs protégés via LOG_CRITICAL_DCC
