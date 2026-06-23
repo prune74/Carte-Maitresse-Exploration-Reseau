@@ -125,25 +125,26 @@ enum ExsaAspect : uint8_t {
 
 
 /* ============================================================
- *  🟦 PROTOCOLE MASTER ↔ SA — Bus CAN 29 bits
+ *  🟦 PROTOCOLE ERM ↔ CC — Bus CAN 29 bits
  * ============================================================
  *
  *  Ces commandes sont envoyées par :
- *    • DiscoveryMaster (Master)
- *    • Satellites (SA / EXSA)
+ *    • DiscoveryMaster (ERM)
+ *    • Satellites (CC)
  *
  *  Elles utilisent le format CAN étendu Märklin 29 bits.
  * ============================================================
  */
 
-/* --- Master → Satellites --- */
+/* --- ERM → CC --- */
 #define CMD_WIFI_ON_OFF                 0xBD    // Active/désactive WiFi
 #define CMD_DISCOVERY_ON_OFF            0xBE    // Active/désactive Discovery
 #define CMD_SAVE_ALL                    0xBF    // Sauvegarde globale
 #define CMD_RESTART_ALL                 0xBC    // Redémarrage global
 #define CMD_SET_PROFILE                 0x20    // Profil voie (0=N, 1=HO)
+#define CMD_CC_OFFLINE                  0xC0    // 
 
-/* --- Satellites → Master --- */
+/* --- CC → ERM --- */
 #define CMD_SAT_HEARTBEAT               0xB0    // Heartbeat
 #define CMD_SAT_TEST_BUS                0xB2    // Test bus CAN
 #define CMD_SAT_TEST_BUS_REPLY          0xB3    // Réponse test bus

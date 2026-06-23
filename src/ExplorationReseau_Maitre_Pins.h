@@ -19,3 +19,12 @@ static const gpio_num_t PIN_LED_STOP = GPIO_NUM_25;
    • Permet de lever STOP même sans interface Web
    ============================================================ */
 static const gpio_num_t PIN_BTN_CLEAR_STOP = GPIO_NUM_26;
+
+/* ============================================================
+   🟧 LED CC OFFLINE — Carte Maîtresse Exploration Réseau
+   ------------------------------------------------------------
+   • LED orange (ou autre couleur)
+   • Allumée lorsqu’un CC du réseau devient OFFLINE
+   • Indique une anomalie topologique détectée par ERS
+   ============================================================ */
+static const gpio_num_t PIN_LED_CC_OFFLINE = GPIO_NUM_27;

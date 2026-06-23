@@ -71,6 +71,9 @@ void ERM_StopService::clearStop()
     _stopActive = false;
     digitalWrite(PIN_LED_STOP, LOW);
 
+    // 🟢 Auto-reset LED_CC_OFFLINE
+    digitalWrite(PIN_LED_CC_OFFLINE, LOW);
+
     CanMsg msg(uint16_t(PROTOCOLCAN_ID_CLEAR_STOP), {});
     canService.sendMessage(msg);
 
@@ -95,6 +98,9 @@ void ERM_StopService::onClearReceived()
 {
     _stopActive = false;
     digitalWrite(PIN_LED_STOP, LOW);
+
+    // 🟢 Auto-reset LED_CC_OFFLINE
+    digitalWrite(PIN_LED_CC_OFFLINE, LOW);
 
     LOG_INFO("[STOP] CLEAR STOP reçu via CAN");
 }

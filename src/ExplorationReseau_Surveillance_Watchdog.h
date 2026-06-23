@@ -33,6 +33,7 @@
 void ERS_init();
 void ERS_registerHeartbeat(uint16_t satId);
 void ERS_triggerEmergencyStop(); // STOP global (ID 0x201)
+void ERS_triggerCcOffline(uint16_t offlineId);
 void ERS_supervise();
 void ERS_begin();
 

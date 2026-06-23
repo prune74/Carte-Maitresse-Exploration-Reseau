@@ -17,6 +17,8 @@
  */
 
 #include "ExplorationReseau_Surveillance_Watchdog.h"
+#include "ExplorationReseau_Maitre_Pins.h"
+#include "ExplorationReseau_Protocol.h"
 #include "Variables.h"
 #include "ExplorationReseau_Maitre_SatManager.h"
 #include "ExplorationReseau_Maitre_CanService.h"
@@ -44,6 +46,10 @@ void ERS_init()
     ers_enabled = true;
     ers_onlineCount = 0;
     ers_lastSupervisionTime = millis();
+
+    // LED CC OFFLINE
+    pinMode(PIN_LED_CC_OFFLINE, OUTPUT);
+    digitalWrite(PIN_LED_CC_OFFLINE, LOW);
 }
 
 /* ---------------------------------------------------------------------------
@@ -87,6 +93,31 @@ void ERS_triggerEmergencyStop()
 }
 
 /* ---------------------------------------------------------------------------
+ * 🟥 CC OFFLINE
+ *
+ * Envoie une trame CAN CMD_CC_OFFLINE (commande 0xC0) contenant l’ID
+ * du CC devenu hors ligne.
+ * ------------------------------------------------------------------------- */
+void ERS_triggerCcOffline(uint16_t offlineId)
+{
+    // Payload = [ID_H][ID_L]
+    uint8_t data[2] = {
+        uint8_t(offlineId >> 8),
+        uint8_t(offlineId & 0xFF)};
+
+    // Construction de la trame 29 bits
+    CanMsg msg = ProtocolCAN::makeMsg(
+        2,              // priorité
+        CMD_CC_OFFLINE, // commande
+        false,          // pas une réponse
+        idMain,         // source = ERM
+        {data[0], data[1]});
+
+    canService.sendMessage(msg);
+    LOG_WARN("[ERS] CC %u OFFLINE → notification envoyée !", offlineId);
+}
+
+/* ---------------------------------------------------------------------------
  * 🛡️ SUPERVISION
  *
  * Appelée par ERS_TaskSupervision (prio 2).
@@ -108,11 +139,15 @@ void ERS_supervise()
     {
         ers_timeoutCount++;
 
-        LOG_ERROR("[ERS] Satellite %u OFFLINE → STOP global", offlineId);
-        ERS_triggerEmergencyStop();
+        LOG_ERROR("[ERS] CC %u OFFLINE → STOP global + notification CC", offlineId);
+
+        ERS_triggerEmergencyStop();             // STOP global
+        ERS_triggerCcOffline(offlineId);        // Notification aux autres CC
+        digitalWrite(PIN_LED_CC_OFFLINE, HIGH); // LED CC OFFLINE
     }
     else
     {
         LOG_INFO("ERS → aucun satellite offline");
+        digitalWrite(PIN_LED_CC_OFFLINE, LOW); // LED CC OFFLINE éteinte
     }
 }
