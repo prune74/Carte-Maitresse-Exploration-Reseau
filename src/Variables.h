@@ -27,7 +27,7 @@
 #include "DCC2CAN_DccDecoder.h"
 #include "DCC2CAN_State.h"
 
-#include "ExplorationReseau_Maitre_SatManager.h"
+#include "ERM_CC_Manager.h"
 #include "CanBus.h"
 
 // 🔥 Forward declarations pour casser les boucles d’includes
@@ -87,18 +87,18 @@ extern volatile uint8_t g_restartState;
 extern bool g_isTestMode;
 
 /* ---------------------------------------------------------------------------
-   🟩 ERM — Gestion des satellites
+   🟩 ERM — Gestion des Canton Controllers
 --------------------------------------------------------------------------- */
 
-extern ERM_SatManager satManager;
-extern volatile uint8_t g_satOnlineCount;
+extern ERM_CC_Manager CC_Manager;
+extern volatile uint8_t g_ccOnlineCount;
 extern volatile uint8_t g_lastSatId;
 
 /* ---------------------------------------------------------------------------
    🟩 ERM — CAN : tableau de bus
 --------------------------------------------------------------------------- */
 
-extern CanBus* CAN[2];
+extern CanBus *CAN[2];
 extern volatile uint32_t g_lastCanError;
 
 /* ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ extern uint32_t ERS_RX_PERIOD_MS;
    🟥 ERS — TABLE DES HEARTBEATS
 --------------------------------------------------------------------------- */
 
-extern uint32_t ers_lastHeartbeat[NB_SAT];
+extern uint32_t ers_lastHeartbeat[NB_CC];
 
 extern SemaphoreHandle_t ersHeartbeatMutex;
 extern StaticSemaphore_t ersHeartbeatMutexBuffer;

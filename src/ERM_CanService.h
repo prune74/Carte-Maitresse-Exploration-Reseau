@@ -13,7 +13,7 @@
  * Ce module gère :
  *   • la réception et l’analyse des trames CAN
  *   • la supervision du bus (détection silence/erreur)
- *   • l’envoi de commandes vers les satellites
+ *   • l’envoi de commandes vers les Canton Controllers
  *   • les interactions Web → CAN
  *
  * Conception :
@@ -46,13 +46,13 @@ public:
     // Envoi public d’une trame CAN
     bool sendMessage(const CanMsg &msg);
 
-    // Commandes satellites
+    // Commandes Canton Controllers
     void ERM_handleCmdTestBus(uint16_t idExp, uint8_t priorite);
     void ERM_handleCmdRequestId(uint16_t idExp, uint8_t priorite);
 
     // Commandes Web → CAN
     void sendWifiOnOff(bool on);
-    void sendDiscoveryOnOff(bool on);
+    void sendExplorationOnOff(bool on);
     void sendSaveAll();
     void sendRestartAll();
     void sendTrackProfile(uint8_t profile);

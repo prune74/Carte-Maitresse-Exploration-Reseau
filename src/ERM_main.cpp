@@ -1,5 +1,5 @@
 /*
- * ExplorationReseau_Maitre_main.cpp
+ * ERM_main.cpp
  *
  * 🎯 Rôle
  * Point d’entrée principal de la Carte Maîtresse d’Exploration du Réseau (ERM).
@@ -7,26 +7,26 @@
  * Ce module orchestre :
  *   • l’initialisation du système (WiFi, Web, CAN, paramètres)
  *   • la boucle principale FreeRTOS
- *   • la gestion des satellites
+ *   • la gestion des Canton Controllers
  *
  * Il constitue le cœur du fonctionnement de la carte.
  */
 
-#include "ExplorationReseau_Maitre_main.h"
+#include "ERM_main.h"
 #include "Variables.h"
-#include "ExplorationReseau_Maitre_Settings.h"
-#include "ExplorationReseau_Maitre_SatManager.h"
-#include "ExplorationReseau_Maitre_CanService.h"
-#include "ExplorationReseau_Maitre_Fl_Wifi.h"
-#include "ExplorationReseau_Maitre_WebHandler.h"
-#include "ExplorationReseau_Maitre_Config.h"
+#include "ERM_Settings.h"
+#include "ERM_CC_Manager.h"
+#include "ERM_CanService.h"
+#include "ERM_Fl_Wifi.h"
+#include "ERM_WebHandler.h"
+#include "ERM_Config.h"
 
 #include "CanInit.h"
 #include "CAN_Config.h"
 #include "Debug.h"
 
 // Configuration CAN globale
-extern MasterConfig MASTER_CAN_CONFIG;
+extern ERM_Config ERM_CAN_CONFIG;
 
 // Gestion WiFi (local au module)
 ERM_Fl_Wifi wifi;
@@ -57,7 +57,7 @@ void ERM_setup()
      * INITIALISATION DES BUS CAN
      * --------------------------------------------------------- */
     LOG_INFO("Initialisation des bus CAN (CAN0 + CAN1)...");
-    CanInit::begin(MASTER_CAN_CONFIG);
+    CanInit::begin(ERM_CAN_CONFIG);
 
     // Laisse le contrôleur TWAI sortir du RESET
     vTaskDelay(pdMS_TO_TICKS(5));
@@ -78,10 +78,10 @@ void ERM_setup()
     canService.begin();
 
     /* -----------------------------------------------------------
-     * SATELLITES
+     * Canton Controller
      * --------------------------------------------------------- */
-    LOG_INFO("Initialisation du gestionnaire de satellites...");
-    satManager.begin();
+    LOG_INFO("Initialisation du gestionnaire de Canton Controllers...");
+    CC_Manager.begin();
 
     LOG_INFO("ERM_setup() terminé");
 }
@@ -96,7 +96,7 @@ void ERM_loop()
 {
     canService.loop();
     webHandler.loop();
-    satManager.loop();
+    CC_Manager.loop();
 
     // Pause légère pour éviter de saturer le CPU
     vTaskDelay(pdMS_TO_TICKS(10));

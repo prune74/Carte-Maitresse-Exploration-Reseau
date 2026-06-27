@@ -1,9 +1,9 @@
-# DCC2CAN — Discovery 2026  
+# DCC2CAN — Canton Controller 2026  
 Convertisseur DCC → CAN Booster (TX only)
 
 ## 🎯 Rôle du module
-DCC2CAN est un module firmware du projet **Discovery 2026**.  
-Il convertit en temps réel le signal **DCC logique** provenant de LaBox en trames **CAN Booster** destinées aux boosters Discovery.
+DCC2CAN est un module firmware du projet **Canton Controller 2026**.  
+Il convertit en temps réel le signal **DCC logique** provenant de LaBox en trames **CAN Booster** destinées aux boosters Canton Controller.
 
 Le module :
 - décode le signal DCC (bit, phase, timing)
@@ -76,7 +76,7 @@ Bus CAN Booster (TX only)
 
 ---
 
-## 🔌 Brochage (DCC2CAN_Pins.h)
+## 🔌 Brochage (Pins.h)
 
 | Fonction       | Broche ESP32 |
 |----------------|--------------|
@@ -130,7 +130,7 @@ En cas de DCC_LOST ou RECOVERY :
 ```text
 SCR/
 ├── DCC2CAN_main.cpp
-├── DCC2CAN_Pins.h
+├── Pins.h
 ├── DCC2CAN_DccDecoder.*
 ├── DCC2CAN_TaskDcc.*
 ├── DCC2CAN_TaskCan.*
@@ -142,4 +142,4 @@ SCR/
 ---
 
 ## ✔️ Statut
-Module **stable**, **minimal**, **fiable**, utilisé dans Discovery 2026 pour la conversion DCC → CAN Booster.
+Module **stable**, **minimal**, **fiable**, utilisé dans Canton Controller 2026 pour la conversion DCC → CAN Booster.

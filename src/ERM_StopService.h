@@ -1,5 +1,5 @@
 /*
- * ExplorationReseau_Maitre_StopService.h
+ * ERM_StopService.h
  *
  * 🎯 Rôle
  * Service centralisé de gestion du STOP global pour la Carte Maîtresse ERM.
@@ -28,8 +28,8 @@ public:
     static void begin();
 
     // Actions STOP / CLEAR STOP (émission CAN + mise à jour interne)
-    static void triggerStop();        // STOP global (ID 0x201)
-    static void clearStop();          // CLEAR STOP (ID 0x202)
+    static void triggerStop(); // STOP global (ID 0x201)
+    static void clearStop();   // CLEAR STOP (ID 0x202)
 
     // Appelé par le service CAN lors de la réception d’une trame STOP/CLEAR
     static void onStopReceived();

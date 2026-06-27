@@ -6,8 +6,8 @@
 #include <SPIFFS.h>
 
 #include "CanMsg.h"
-#include "ExplorationReseau_Maitre_CanService.h"
-#include "ExplorationReseau_Maitre_SatManager.h"
+#include "ERM_CanService.h"
+#include "ERM_CC_Manager.h"
 
 /*
  * 🎯 Rôle

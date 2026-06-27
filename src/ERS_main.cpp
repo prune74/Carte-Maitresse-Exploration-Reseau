@@ -1,5 +1,5 @@
 /*
- * ExplorationReseau_Surveillance_main.cpp
+ * ERS_main.cpp
  *
  * 🎯 Rôle
  * Point d’entrée du module de Surveillance ERS.
@@ -11,8 +11,8 @@
  * Il constitue la couche Watchdog du système ERM.
  */
 
-#include "ExplorationReseau_Surveillance_main.h"
-#include "ExplorationReseau_Surveillance_Watchdog.h"
+#include "ERS_main.h"
+#include "ERS_Watchdog.h"
 #include "Variables.h"
 #include "Debug.h"
 
@@ -36,7 +36,7 @@ void ERS_begin()
         "ERS_RX",
         4096,
         nullptr,
-        4,          // ★ priorité corrigée
+        4, // ★ priorité corrigée
         nullptr);
 
     if (ok1 == pdPASS)
@@ -53,7 +53,7 @@ void ERS_begin()
         "ERS_SUP",
         4096,
         nullptr,
-        2,          // ★ priorité corrigée
+        2, // ★ priorité corrigée
         nullptr);
 
     if (ok2 == pdPASS)

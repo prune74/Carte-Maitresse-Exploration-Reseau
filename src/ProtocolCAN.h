@@ -4,13 +4,6 @@
 #include "CanMsg.h"
 
 // ---------------------------------------------------------------------------
-// IDs 11 bits — messages globaux Master ↔ SA
-// ---------------------------------------------------------------------------
-#define PROTOCOLCAN_ID_HEARTBEAT 0x200
-#define PROTOCOLCAN_ID_STOP 0x201
-#define PROTOCOLCAN_ID_CLEAR_STOP 0x202
-
-// ---------------------------------------------------------------------------
 // Structure décodée
 // ---------------------------------------------------------------------------
 struct ProtocolCANFields

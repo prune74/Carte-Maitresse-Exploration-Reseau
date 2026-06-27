@@ -1,8 +1,8 @@
-#include "ExplorationReseau_Maitre_Settings.h"
+#include "ERM_Settings.h"
 #include "Debug.h"
 
 /*
- * ExplorationReseau_Maitre_Settings.cpp
+ * ERM_Settings.cpp
  *
  * 🎯 Rôle
  * Gestion des paramètres persistants de la Carte Maîtresse ERM.
@@ -23,17 +23,17 @@
 // ---------------------------------------------------------------------------
 // VARIABLES STATIQUES
 // ---------------------------------------------------------------------------
-bool     ERM_Settings::WIFI_ON        = true;
-bool     ERM_Settings::EXPLORATION_ON = true;
-uint16_t ERM_Settings::idNode         = NO_ID;
+bool ERM_Settings::WIFI_ON = true;
+bool ERM_Settings::EXPLORATION_ON = true;
+uint16_t ERM_Settings::idNode = NO_ID;
 
-String   ERM_Settings::WIFI_SSID      = "";
-String   ERM_Settings::WIFI_PSW       = "";
+String ERM_Settings::WIFI_SSID = "";
+String ERM_Settings::WIFI_PSW = "";
 
-uint8_t  ERM_Settings::track_profile  = 0;   // 0 = N (12V), 1 = HO (15V)
+uint8_t ERM_Settings::track_profile = 0; // 0 = N (12V), 1 = HO (15V)
 
 // Mode test : FakeDCC + loopback CAN
-bool     ERM_Settings::MODE_TEST      = true;
+bool ERM_Settings::MODE_TEST = true;
 
 // ---------------------------------------------------------------------------
 // INITIALISATION SPIFFS
@@ -72,15 +72,15 @@ void ERM_Settings::readFile()
     }
 
     // Lecture sécurisée des paramètres
-    idNode         = doc["idNode"]         | NO_ID;
+    idNode = doc["idNode"] | NO_ID;
     EXPLORATION_ON = doc["exploration_on"] | true;
-    WIFI_ON        = doc["wifi_on"]        | true;
+    WIFI_ON = doc["wifi_on"] | true;
 
-    WIFI_SSID      = doc["wifi_ssid"]      | "";
-    WIFI_PSW       = doc["wifi_psw"]       | "";
+    WIFI_SSID = doc["wifi_ssid"] | "";
+    WIFI_PSW = doc["wifi_psw"] | "";
 
-    track_profile  = doc["track_profile"]  | 0;
-    MODE_TEST      = doc["mode_test"]      | true;
+    track_profile = doc["track_profile"] | 0;
+    MODE_TEST = doc["mode_test"] | true;
 
     LOG_INFO("Configuration chargée :");
     LOG_INFO(" - idNode         = %u", idNode);
@@ -101,13 +101,13 @@ void ERM_Settings::writeFile()
 {
     StaticJsonDocument<512> doc;
 
-    doc["idNode"]         = idNode;
+    doc["idNode"] = idNode;
     doc["exploration_on"] = EXPLORATION_ON;
-    doc["wifi_on"]        = WIFI_ON;
-    doc["wifi_ssid"]      = WIFI_SSID;
-    doc["wifi_psw"]       = WIFI_PSW;
-    doc["track_profile"]  = track_profile;
-    doc["mode_test"]      = MODE_TEST;
+    doc["wifi_on"] = WIFI_ON;
+    doc["wifi_ssid"] = WIFI_SSID;
+    doc["wifi_psw"] = WIFI_PSW;
+    doc["track_profile"] = track_profile;
+    doc["mode_test"] = MODE_TEST;
 
     File file = SPIFFS.open("/settings.json", "w");
     if (!file)

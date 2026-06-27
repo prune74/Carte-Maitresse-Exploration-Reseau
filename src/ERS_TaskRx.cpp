@@ -1,18 +1,18 @@
 /*
- * ExplorationReseau_Surveillance_TaskRx.cpp
+ * ERS_TaskRx.cpp
  *
  * 🎯 Rôle
  * Tâche FreeRTOS chargée de lire les trames CAN contenant les heartbeats
- * des satellites, et de mettre à jour le module de Surveillance ERS.
+ * des Canton Controllers, et de mettre à jour le module de Surveillance ERS.
  *
  * Cette tâche tourne à haute fréquence pour garantir une détection rapide
  * des pertes de communication. Elle doit rester légère, non bloquante,
  * et ne jamais perturber les tâches temps réel critiques (DCC2CAN).
  */
 
-#include "ExplorationReseau_Surveillance_Watchdog.h"
+#include "ERS_Watchdog.h"
 #include "Variables.h"
-#include "ExplorationReseau_Maitre_CanService.h"
+#include "ERM_CanService.h"
 #include "ProtocolCAN.h"
 #include "CanMsg.h"
 #include "Debug.h"
@@ -38,14 +38,14 @@ void ERS_TaskRx(void *pv)
             // Heartbeat ERM (ID 0x200)
             if (ProtocolCAN::isHeartbeat(msg.id))
             {
-                uint16_t satId =
+                uint16_t ccId =
                     (uint16_t(msg.data[0]) << 8) |
                     uint16_t(msg.data[1]);
 
-                ERS_registerHeartbeat(satId);
+                ERS_registerHeartbeat(ccId);
 
                 // Log sécurisé : jamais en mode réel
-                LOG_CRITICAL_DCC("ERS RX → heartbeat de %u", satId);
+                LOG_CRITICAL_DCC("ERS RX → heartbeat de %u", ccId);
             }
         }
 

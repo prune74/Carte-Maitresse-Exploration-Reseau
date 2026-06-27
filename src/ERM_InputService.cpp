@@ -1,5 +1,5 @@
 /*
- * ExplorationReseau_Maitre_InputService.cpp
+ * ERM_InputService.cpp
  *
  * 🎯 Rôle
  * Gestion des entrées physiques de la Carte Maîtresse d’Exploration du Réseau.
@@ -13,9 +13,9 @@
  * Le bouton ne peut lever STOP que si STOP est réellement actif.
  */
 
-#include "ExplorationReseau_Maitre_InputService.h"
-#include "ExplorationReseau_Maitre_Pins.h"
-#include "ExplorationReseau_Maitre_StopService.h"
+#include "ERM_InputService.h"
+#include "Pins.h"
+#include "ERM_StopService.h"
 #include "Debug.h"
 
 /* ---------------------------------------------------------------------------

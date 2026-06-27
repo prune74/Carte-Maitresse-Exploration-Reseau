@@ -1,5 +1,5 @@
 /*
- * ExplorationReseau_Maitre_Fl_Wifi.cpp
+ * ERM_Fl_Wifi.cpp
  *
  * 🎯 Rôle
  * Gestion du WiFi pour la Carte Maîtresse d’Exploration du Réseau (ERM).
@@ -14,9 +14,9 @@
  *   • logs détaillés
  */
 
-#include "ExplorationReseau_Maitre_Fl_Wifi.h"
-#include "ExplorationReseau_Maitre_Settings.h"
-#include "ExplorationReseau_Maitre_Config.h"
+#include "ERM_Fl_Wifi.h"
+#include "ERM_Settings.h"
+#include "ERM_Config.h"
 #include "Debug.h"
 #include <WiFi.h>
 
@@ -32,7 +32,7 @@ void ERM_Fl_Wifi::start()
     LOG_INFO("WiFi → Mode AP (Access Point)");
 
     const char *ssid = "digital";
-    const char *psw  = "digital";
+    const char *psw = "digital";
 
     WiFi.softAP(ssid, psw);
 
@@ -44,7 +44,7 @@ void ERM_Fl_Wifi::start()
     // MODE STA (Client)
     // -----------------------------------------------------------------------
     String ssid = ERM_Settings::getWifiSsid();
-    String psw  = ERM_Settings::getWifiPassword();
+    String psw = ERM_Settings::getWifiPassword();
 
     LOG_INFO("WiFi → Mode STA (Client)");
     LOG_INFO("WiFi STA → Connexion à SSID=\"%s\"", ssid.c_str());

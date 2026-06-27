@@ -1,4 +1,5 @@
 #include "ProtocolCAN.h"
+#include "Protocol.h"
 #include "CanID.h"
 #include "Debug.h"
 
@@ -36,17 +37,17 @@ ProtocolCANFields ProtocolCAN::decode(uint32_t id)
 // ---------------------------------------------------------------------------
 bool ProtocolCAN::isHeartbeat(uint32_t id)
 {
-    return id == PROTOCOLCAN_ID_HEARTBEAT;
+    return id == uint16_t(Cmd_Global11::HEARTBEAT);
 }
 
 bool ProtocolCAN::isStop(uint32_t id)
 {
-    return id == PROTOCOLCAN_ID_STOP;
+    return id == uint16_t(Cmd_Global11::EMERGENCY_STOP);
 }
 
 bool ProtocolCAN::isClearStop(uint32_t id)
 {
-    return id == PROTOCOLCAN_ID_CLEAR_STOP;
+    return id == uint16_t(Cmd_Global11::CLEAR_STOP);
 }
 
 // ---------------------------------------------------------------------------

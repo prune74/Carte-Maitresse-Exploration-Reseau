@@ -29,7 +29,7 @@
    ---------------------------------------------------------------------------
    Configure le contrôleur CAN interne de l’ESP32 :
      - bitrate défini dans DCC2CAN_Config.h
-     - pins TX/RX définis dans DCC2CAN_Pins.h
+     - pins TX/RX définis dans Pins.h
 --------------------------------------------------------------------------- */
 void CanBooster_begin();
 

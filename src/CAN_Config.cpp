@@ -2,4 +2,4 @@
 
 extern bool g_isTestMode;
 
-MasterConfig MASTER_CAN_CONFIG;
+ERM_Config ERM_CAN_CONFIG;

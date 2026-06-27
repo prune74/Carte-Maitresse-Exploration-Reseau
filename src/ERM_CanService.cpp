@@ -1,33 +1,23 @@
 /*
- * ExplorationReseau_Maitre_CanService.cpp
- *
- * 🎯 Rôle
- * Service CAN principal de la Carte Maîtresse d’Exploration du Réseau (ERM).
- *
- * Ce module gère :
- *   • la réception et l’analyse des trames CAN
- *   • la supervision du bus (détection silence/erreur)
- *   • l’envoi de commandes vers les satellites
- *   • les interactions Web → CAN
+ * ERM_CanService.cpp
  */
 
-#include "ExplorationReseau_Maitre_CanService.h"
-#include "ExplorationReseau_Maitre_Pins.h"
-#include "ExplorationReseau_Maitre_Settings.h"
-#include "ExplorationReseau_Maitre_SatManager.h"
-#include "ExplorationReseau_Maitre_StopService.h"
+#include "ERM_CanService.h"
+#include "Pins.h"
+#include "ERM_Settings.h"
+#include "ERM_CC_Manager.h"
+#include "ERM_StopService.h"
 #include "Variables.h"
 #include "ProtocolCAN.h"
-#include "ExplorationReseau_Protocol.h"
+#include "Protocol.h"
 #include "CanBus.h"
 #include "Debug.h"
 
-// Instances externes
-extern ERM_SatManager satManager;
+extern ERM_CC_Manager CC_Manager;
 extern bool g_isTestMode;
 
 /* ---------------------------------------------------------------------------
- * 🧩 CONSTRUCTEUR
+ * CONSTRUCTEUR
  * ------------------------------------------------------------------------- */
 ERM_CanService::ERM_CanService()
 {
@@ -37,7 +27,7 @@ ERM_CanService::ERM_CanService()
 }
 
 /* ---------------------------------------------------------------------------
- * 🚀 INITIALISATION DU SERVICE CAN
+ * INITIALISATION
  * ------------------------------------------------------------------------- */
 bool ERM_CanService::begin()
 {
@@ -46,7 +36,7 @@ bool ERM_CanService::begin()
 }
 
 /* ---------------------------------------------------------------------------
- * 📡 RÉCEPTION CAN (boucle principale)
+ * RÉCEPTION CAN
  * ------------------------------------------------------------------------- */
 void ERM_CanService::loop()
 {
@@ -67,7 +57,7 @@ void ERM_CanService::loop()
 }
 
 /* ---------------------------------------------------------------------------
- * 🛡️ SUPERVISION DU BUS CAN
+ * SUPERVISION BUS
  * ------------------------------------------------------------------------- */
 bool ERM_CanService::checkBus(uint32_t timeoutMs)
 {
@@ -86,7 +76,7 @@ uint32_t ERM_CanService::lastRxAgeMs() const
 }
 
 /* ---------------------------------------------------------------------------
- * 📦 ACCÈS À LA DERNIÈRE TRAME
+ * ACCÈS À LA DERNIÈRE TRAME
  * ------------------------------------------------------------------------- */
 bool ERM_CanService::getLastFrame(CanMsg &msg)
 {
@@ -100,7 +90,7 @@ bool ERM_CanService::getLastFrame(CanMsg &msg)
 }
 
 /* ---------------------------------------------------------------------------
- * 🚀 ENVOI PUBLIC D’UNE TRAME CAN
+ * ENVOI PUBLIC
  * ------------------------------------------------------------------------- */
 bool ERM_CanService::sendMessage(const CanMsg &msg)
 {
@@ -108,7 +98,7 @@ bool ERM_CanService::sendMessage(const CanMsg &msg)
 }
 
 /* ---------------------------------------------------------------------------
- * 🧠 DÉCODAGE ET TRAITEMENT D’UNE TRAME CAN
+ * DÉCODAGE D’UNE TRAME CAN
  * ------------------------------------------------------------------------- */
 void ERM_CanService::ERM_handleFrame(const CanMsg &msg)
 {
@@ -133,11 +123,11 @@ void ERM_CanService::ERM_handleFrame(const CanMsg &msg)
     {
         uint16_t idExp = (uint16_t(msg.data[0]) << 8) | uint16_t(msg.data[1]);
         LOG_CRITICAL_DCC("[CAN] HEARTBEAT de %u", idExp);
-        satManager.updateHeartbeat(idExp);
+        CC_Manager.updateHeartbeat(idExp);
         return;
     }
 
-    // 🟧 Trame 29 bits → protocole d’exploration
+    // 🟧 Trame 29 bits → protocole Exploration
     auto f = ProtocolCAN::decode(msg.id);
 
     if (f.resp)
@@ -145,19 +135,14 @@ void ERM_CanService::ERM_handleFrame(const CanMsg &msg)
 
     LOG_CRITICAL_DCC("[CAN] ERM RX → cmd=0x%X src=%u prio=%u", f.cmd, f.src, f.prio);
 
-    switch (f.cmd)
+    switch (static_cast<Cmd_CC_to_ERM>(f.cmd))
     {
-    case CMD_SAT_TEST_BUS:
+    case Cmd_CC_to_ERM::TEST_BUS:
         ERM_handleCmdTestBus(f.src, f.prio);
         break;
 
-    case CMD_SAT_REQUEST_ID:
+    case Cmd_CC_to_ERM::REQUEST_ID:
         ERM_handleCmdRequestId(f.src, f.prio);
-        break;
-
-    case CMD_SAT_HEARTBEAT:
-        LOG_CRITICAL_DCC("[CAN] HEARTBEAT Exploration de %u", f.src);
-        satManager.updateHeartbeat(f.src);
         break;
 
     default:
@@ -167,7 +152,7 @@ void ERM_CanService::ERM_handleFrame(const CanMsg &msg)
 }
 
 /* ---------------------------------------------------------------------------
- * 🚚 ENVOI BAS NIVEAU D’UNE TRAME CAN
+ * ENVOI BAS NIVEAU
  * ------------------------------------------------------------------------- */
 bool ERM_CanService::ERM_sendFrame(const CanMsg &msg)
 {
@@ -188,25 +173,25 @@ bool ERM_CanService::ERM_sendFrame(const CanMsg &msg)
 }
 
 /* ---------------------------------------------------------------------------
- * 🟦 TRAITEMENT : TEST DE BUS D’UN SATELLITE
+ * TEST BUS
  * ------------------------------------------------------------------------- */
 void ERM_CanService::ERM_handleCmdTestBus(uint16_t idExp, uint8_t prio)
 {
-    LOG_INFO("[CAN] TestBus reçu de %u", idExp);
+    LOG_INFO("[CAN] Test Bus reçu de %u", idExp);
 
     CanMsg msg = ProtocolCAN::makeMsg(
         prio,
-        CMD_SAT_TEST_BUS_REPLY,
+        static_cast<uint16_t>(Cmd_ERM_to_CC::TEST_BUS_REPLY),
         true,
         idExp,
         {uint8_t(1)});
 
     ERM_sendFrame(msg);
-    satManager.addOrUpdate(idExp);
+    CC_Manager.addOrUpdate(idExp);
 }
 
 /* ---------------------------------------------------------------------------
- * 🟧 TRAITEMENT : DEMANDE D’ATTRIBUTION D’ID
+ * REQUEST ID
  * ------------------------------------------------------------------------- */
 void ERM_CanService::ERM_handleCmdRequestId(uint16_t idExp, uint8_t prio)
 {
@@ -216,14 +201,14 @@ void ERM_CanService::ERM_handleCmdRequestId(uint16_t idExp, uint8_t prio)
     {
         CanMsg msg = ProtocolCAN::makeMsg(
             prio,
-            CMD_SAT_REQUEST_ID_REPLY,
+            static_cast<uint16_t>(Cmd_ERM_to_CC::REQUEST_ID_REPLY),
             true,
             idExp,
             {uint8_t(ERM_Settings::idNode)});
 
         if (ERM_sendFrame(msg))
         {
-            LOG_INFO("[CAN] Attribution ID=%u au satellite %u",
+            LOG_INFO("[CAN] Attribution ID=%u au Canton Controller %u",
                      ERM_Settings::idNode, idExp);
 
             ERM_Settings::idNode++;
@@ -237,24 +222,33 @@ void ERM_CanService::ERM_handleCmdRequestId(uint16_t idExp, uint8_t prio)
 }
 
 /* ---------------------------------------------------------------------------
- * 🌐 COMMANDES WEB → CAN
+ * COMMANDES WEB → CAN
  * ------------------------------------------------------------------------- */
-
 void ERM_CanService::sendWifiOnOff(bool on)
 {
     LOG_INFO("[WEB→CAN] WIFI_ON_OFF = %s", on ? "true" : "false");
 
     CanMsg msg = ProtocolCAN::makeMsg(
-        2, CMD_WIFI_ON_OFF, false, idMain, {uint8_t(on ? 1 : 0)});
+        2,
+        static_cast<uint16_t>(Cmd_ERM_to_CC::WIFI_ON_OFF),
+        false,
+        idMain,
+        {uint8_t(on ? 1 : 0)});
+
     ERM_sendFrame(msg);
 }
 
-void ERM_CanService::sendDiscoveryOnOff(bool on)
+void ERM_CanService::sendExplorationOnOff(bool on)
 {
     LOG_INFO("[WEB→CAN] EXPLORATION_ON_OFF = %s", on ? "true" : "false");
 
     CanMsg msg = ProtocolCAN::makeMsg(
-        2, CMD_DISCOVERY_ON_OFF, false, idMain, {uint8_t(on ? 1 : 0)});
+        2,
+        static_cast<uint16_t>(Cmd_ERM_to_CC::EXPLORATION_ON_OFF),
+        false,
+        idMain,
+        {uint8_t(on ? 1 : 0)});
+
     ERM_sendFrame(msg);
 }
 
@@ -263,7 +257,12 @@ void ERM_CanService::sendSaveAll()
     LOG_INFO("[WEB→CAN] SAVE_ALL");
 
     CanMsg msg = ProtocolCAN::makeMsg(
-        2, CMD_SAVE_ALL, false, idMain, {});
+        2,
+        static_cast<uint16_t>(Cmd_ERM_to_CC::SAVE_ALL),
+        false,
+        idMain,
+        {});
+
     ERM_sendFrame(msg);
 }
 
@@ -272,7 +271,12 @@ void ERM_CanService::sendRestartAll()
     LOG_INFO("[WEB→CAN] RESTART_ALL");
 
     CanMsg msg = ProtocolCAN::makeMsg(
-        2, CMD_RESTART_ALL, false, idMain, {});
+        2,
+        static_cast<uint16_t>(Cmd_ERM_to_CC::RESTART_ALL),
+        false,
+        idMain,
+        {});
+
     ERM_sendFrame(msg);
 }
 
@@ -281,6 +285,11 @@ void ERM_CanService::sendTrackProfile(uint8_t profile)
     LOG_INFO("[WEB→CAN] SET_PROFILE = %u", profile);
 
     CanMsg msg = ProtocolCAN::makeMsg(
-        2, CMD_SET_PROFILE, false, idMain, {uint8_t(profile)});
+        2,
+        static_cast<uint16_t>(Cmd_ERM_to_CC::SET_PROFILE),
+        false,
+        idMain,
+        {uint8_t(profile)});
+
     ERM_sendFrame(msg);
 }

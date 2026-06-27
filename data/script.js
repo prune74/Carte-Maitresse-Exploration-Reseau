@@ -52,22 +52,22 @@ function onMessage(event) {
         }
     }
 
-    // --- Satellites ---
-    if (Array.isArray(data.sats)) {
+    // --- Canton Controller ---
+    if (Array.isArray(data.ccs)) {
         let html = "";
-        data.sats.forEach(s => {
+        data.ccs.forEach(s => {
             html += `
-            <div class="sat-item">
+            <div class="cc-item">
                 <div>
-                    <div class="sat-id">SAT ${s.id}</div>
-                    <div class="sat-lastseen">Vu il y a ${s.lastSeen} ms</div>
+                    <div class="cc-id">CC ${s.id}</div>
+                    <div class="cc-lastseen">Vu il y a ${s.lastSeen} ms</div>
                 </div>
-                <div class="${s.online ? 'sat-online' : 'sat-offline'}">
+                <div class="${s.online ? 'cc-online' : 'cc-offline'}">
                     ${s.online ? 'ONLINE' : 'OFFLINE'}
                 </div>
             </div>`;
         });
-        document.getElementById("sat_list").innerHTML = html;
+        document.getElementById("cc_list").innerHTML = html;
     }
 
     // --- STOP ---

@@ -1,12 +1,12 @@
 /*
- * ExplorationReseau_Maitre_WebHandler.cpp
+ * ERM_WebHandler.cpp
  *
  * 🎯 Rôle
  * Gestion du serveur HTTP + WebSocket de la Carte Maîtresse.
  *
  * Ce module assure :
  *   • la communication WebSocket avec l’interface utilisateur
- *   • l’envoi d’états (CAN, satellites, paramètres…)
+ *   • l’envoi d’états (CAN, Canton Controllers, paramètres…)
  *   • la réception des commandes Web (WIFI, EXPLORATION, STOP, CLEAR STOP…)
  *
  * Depuis la refonte STOP :
@@ -14,18 +14,18 @@
  *   → WebHandler ne construit plus de trames CAN STOP/CLEAR STOP.
  */
 
-#include "ExplorationReseau_Maitre_WebHandler.h"
-#include "ExplorationReseau_Maitre_Settings.h"
-#include "ExplorationReseau_Maitre_SatManager.h"
-#include "ExplorationReseau_Maitre_CanService.h"
-#include "ExplorationReseau_Maitre_Config.h"
-#include "ExplorationReseau_Maitre_StopService.h"
+#include "ERM_WebHandler.h"
+#include "ERM_Settings.h"
+#include "ERM_CC_Manager.h"
+#include "ERM_CanService.h"
+#include "ERM_Config.h"
+#include "ERM_StopService.h"
 #include "Variables.h"
 
 #include "Debug.h"
 
 // Instances externes
-extern ERM_SatManager satManager;
+extern ERM_CC_Manager CC_Manager;
 extern ERM_CanService canService;
 extern bool g_isTestMode;
 
@@ -96,15 +96,15 @@ void ERM_WebHandler::pushStatus()
     doc["can_ok"] = canService.isCanOK();
     doc["can_last_ms"] = canService.lastRxAgeMs();
 
-    // --- Liste des satellites ---
-    JsonArray satsJson = doc.createNestedArray("sats");
+    // --- Liste des Canton Controllers ---
+    JsonArray ccsJson = doc.createNestedArray("ccs");
 
-    for (const auto *it = satManager.satBegin(); it != satManager.satEnd(); ++it)
+    for (const auto *it = CC_Manager.ccBegin(); it != CC_Manager.ccEnd(); ++it)
     {
         const auto &s = *it;
         if (s.id != NO_ID)
         {
-            JsonObject o = satsJson.createNestedObject();
+            JsonObject o = ccsJson.createNestedObject();
             o["id"] = s.id;
             o["online"] = s.online;
             o["lastSeen"] = s.lastSeen;
@@ -211,7 +211,7 @@ void ERM_WebHandler::ERM_wsEvent(AsyncWebSocket *server,
         {
             bool on = doc["exploration_on"];
             ERM_Settings::EXPLORATION_ON = on;
-            _can->sendDiscoveryOnOff(on);
+            _can->sendExplorationOnOff(on);
             ERM_Settings::writeFile();
             pushLog("INFO", on ? "EXPLORATION ON" : "EXPLORATION OFF");
             pushStatus();
@@ -267,7 +267,7 @@ void ERM_WebHandler::ERM_wsEvent(AsyncWebSocket *server,
         if (message.indexOf("clear_stop") >= 0)
         {
             g_stopState = 0;
-            ERM_StopService::clearStop();   // ← centralisé
+            ERM_StopService::clearStop(); // ← centralisé
             pushLog("INFO", "CLEAR STOP demandé (Web)");
             pushStatus();
         }

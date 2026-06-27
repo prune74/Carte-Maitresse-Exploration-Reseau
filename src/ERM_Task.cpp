@@ -1,9 +1,9 @@
 /*
- * ExplorationReseau_Maitre_Task.cpp
+ * ERM_Task.cpp
  *
  * 🎯 Rôle
  * Tâche FreeRTOS dédiée à la supervision périodique du réseau :
- *   • timeouts satellites
+ *   • timeouts Canton Controllers
  *   • état du bus CAN
  *   • push WebSocket vers l’interface Web
  *
@@ -11,10 +11,10 @@
  * régulière sans surcharger le CPU.
  */
 
-#include "ExplorationReseau_Maitre_Task.h"
-#include "ExplorationReseau_Maitre_SatManager.h"
-#include "ExplorationReseau_Maitre_CanService.h"
-#include "ExplorationReseau_Maitre_WebHandler.h"
+#include "ERM_Task.h"
+#include "ERM_CC_Manager.h"
+#include "ERM_CanService.h"
+#include "ERM_WebHandler.h"
 #include "Variables.h"
 #include "Debug.h"
 
@@ -23,8 +23,8 @@
  * ------------------------------------------------------------------------- */
 namespace ERM_TaskParams
 {
-    static constexpr uint32_t PERIOD_MS     = 1000;  // Cadence 1 Hz
-    static constexpr uint32_t TIMEOUT_MS    = 3000;  // 3 s sans heartbeat → offline
+    static constexpr uint32_t PERIOD_MS = 1000;      // Cadence 1 Hz
+    static constexpr uint32_t TIMEOUT_MS = 3000;     // 3 s sans heartbeat → offline
     static constexpr uint32_t CAN_TIMEOUT_MS = 2000; // 2 s sans trame CAN → bus KO
 }
 
@@ -55,9 +55,9 @@ void ERM_Task::taskLoop(void *pvParameters)
     for (;;)
     {
         /* -----------------------------------------------------------
-         * 1) Supervision des satellites
+         * 1) Supervision des Cantons Controllers
          * --------------------------------------------------------- */
-        satManager.checkTimeouts(ERM_TaskParams::TIMEOUT_MS);
+        CC_Manager.checkTimeouts(ERM_TaskParams::TIMEOUT_MS);
 
         /* -----------------------------------------------------------
          * 2) Supervision du bus CAN

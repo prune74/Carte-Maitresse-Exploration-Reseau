@@ -16,7 +16,7 @@
 
 #pragma once
 #include <Arduino.h>
-#include "DCC2CAN_Pins.h"
+#include "Pins.h"
 #include "DCC2CAN_Config.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>

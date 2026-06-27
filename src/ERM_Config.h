@@ -1,5 +1,5 @@
 /*
-ExplorationReseau_Maitre_Config.h
+ERM_Config.h
 
 🎯 Rôle
 Ce fichier regroupe la configuration locale de la Carte Maîtresse
@@ -11,7 +11,7 @@ d’Exploration du Réseau (ERM). Il définit :
   • les options de compilation locales
 
 Le protocole complet d’exploration (commandes, trames 29 bits, etc.)
-est défini séparément dans ExplorationReseau_Protocol.h.
+est défini séparément dans Protocol.h.
 */
 
 #pragma once
@@ -33,33 +33,11 @@ est défini séparément dans ExplorationReseau_Protocol.h.
 /* ---------------------------------------------------------------------------
  * Constantes système
  * --------------------------------------------------------------------------- */
-#define NO_ID   255     // Valeur indiquant l’absence d’identifiant
-#define NO_PIN  255     // Valeur indiquant l’absence de broche
-#define NB_SAT  30      // Nombre maximum de satellites gérés
+#define NO_ID 255  // Valeur indiquant l’absence d’identifiant
+#define NO_PIN 255 // Valeur indiquant l’absence de broche
+#define NB_CC 30   // Nombre maximum de Canton Controllers gérés
 
 /* ---------------------------------------------------------------------------
  * WiFi : Mode Point d’Accès (optionnel)
  * --------------------------------------------------------------------------- */
-//#define WIFI_AP_MODE   // Décommenter pour forcer le mode AP
-
-/* ---------------------------------------------------------------------------
- * 🟥 CAN 11 bits — Messages globaux ERM ↔ Satellites
- * ---------------------------------------------------------------------------
- * Ces identifiants ne suivent pas le format 29 bits du protocole d’exploration.
- * Ils sont utilisés pour la supervision générale du réseau.
- */
-
-/* Heartbeat Satellite → ERM
- * DLC = 2 : [ID_H][ID_L]
- */
-#define PROTOCOLCAN_ID_HEARTBEAT      0x200
-
-/* STOP global ERM → Satellites
- * DLC = 0 : arrêt immédiat du réseau
- */
-#define PROTOCOLCAN_ID_STOP           0x201
-
-/* CLEAR STOP global ERM → Satellites
- * DLC = 0 : levée du STOP global
- */
-#define PROTOCOLCAN_ID_CLEAR_STOP     0x202
+// #define WIFI_AP_MODE   // Décommenter pour forcer le mode AP

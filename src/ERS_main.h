@@ -1,9 +1,9 @@
 #pragma once
 #include <Arduino.h>
-#include "ExplorationReseau_Surveillance_Watchdog.h"
+#include "ERS_Watchdog.h"
 
 /*
- * ExplorationReseau_Surveillance_main.h
+ * ERS_main.h
  *
  * 🎯 Rôle
  * Point d’entrée du module de Surveillance ERS.
@@ -18,7 +18,7 @@
  * - ERS_begin() est l’unique fonction publique d’initialisation.
  * - Les tâches FreeRTOS sont créées ici.
  * - La logique interne (supervision, heartbeat, STOP global)
- *   est gérée dans ExplorationReseau_Surveillance_Watchdog.cpp.
+ *   est gérée dans ERS_Watchdog.cpp.
  */
 
 // Initialisation complète du module ERS (tâches + structures internes)

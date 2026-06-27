@@ -5,7 +5,7 @@
  * Point d’entrée unique du firmware ERM.
  *
  * Initialise :
- *   • ERM_Maitre      → WiFi, Web, CAN, satellites
+ *   • ERM_Maitre      → WiFi, Web, CAN, Canton Controller
  *   • DCC2CAN Booster → Décodage DCC + émission CAN
  *   • ERS             → Surveillance (heartbeats + STOP d’urgence)
  *
@@ -14,9 +14,9 @@
  */
 
 #include <Arduino.h>
-#include "ExplorationReseau_Maitre_main.h"
+#include "ERM_main.h"
 #include "DCC2CAN_main.h"
-#include "ExplorationReseau_Surveillance_main.h"
+#include "ERS_main.h"
 #include "Debug.h"
 
 void setup()

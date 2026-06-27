@@ -1,8 +1,8 @@
 /*
- * ExplorationReseau_Surveillance_TaskSupervision.cpp
+ * ERS_TaskSupervision.cpp
  *
  * 🎯 Rôle
- * Tâche FreeRTOS chargée d’analyser périodiquement les timeouts des satellites
+ * Tâche FreeRTOS chargée d’analyser périodiquement les timeouts des Canton Controllers
  * et de déclencher un STOP global en cas de silence prolongé.
  *
  * Cette tâche constitue le cœur du Watchdog ERS.
@@ -10,7 +10,7 @@
  * temps réel critiques (DCC2CAN).
  */
 
-#include "ExplorationReseau_Surveillance_Watchdog.h"
+#include "ERS_Watchdog.h"
 #include "Variables.h"
 #include "Debug.h"
 

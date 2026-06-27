@@ -6,7 +6,7 @@
  * Déclaration de la tâche FreeRTOS dédiée à la supervision du réseau ERM.
  *
  * La tâche effectue :
- *   • la surveillance des satellites
+ *   • la surveillance des Canton Controllers
  *   • la supervision du bus CAN
  *   • la mise à jour WebSocket
  */
