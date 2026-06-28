@@ -143,6 +143,7 @@ void ERM_CanService::ERM_handleFrame(const CanMsg &msg)
 
     case Cmd_CC_to_ERM::REQUEST_ID:
         ERM_handleCmdRequestId(f.src, f.prio);
+        sendTrackProfile(ERM_Settings::track_profile);
         break;
 
     default:
@@ -197,22 +198,25 @@ void ERM_CanService::ERM_handleCmdRequestId(uint16_t idExp, uint8_t prio)
 {
     LOG_INFO("[CAN] Demande d’ID reçue de %u", idExp);
 
-    if (ERM_Settings::idNode < 253)
+    if (ERM_Settings::idCanton < 253)
     {
         CanMsg msg = ProtocolCAN::makeMsg(
             prio,
             static_cast<uint16_t>(Cmd_ERM_to_CC::REQUEST_ID_REPLY),
             true,
             idExp,
-            {uint8_t(ERM_Settings::idNode)});
+            {uint8_t(ERM_Settings::idCanton)});
 
         if (ERM_sendFrame(msg))
         {
             LOG_INFO("[CAN] Attribution ID=%u au Canton Controller %u",
-                     ERM_Settings::idNode, idExp);
+                     ERM_Settings::idCanton, idExp);
 
-            ERM_Settings::idNode++;
+            ERM_Settings::idCanton++;
             ERM_Settings::writeFile();
+
+            // Envoyer le profil de voie
+            sendTrackProfile(ERM_Settings::track_profile);
         }
     }
     else

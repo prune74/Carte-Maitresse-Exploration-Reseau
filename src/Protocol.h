@@ -3,7 +3,7 @@
 
 /*
  * ============================================================================
- *  Protocol.h — Canton Controller 2026
+ *  Protocol.h — Discovery 2026
  * ============================================================================
  *  Structure modernisée :
  *    → une enum class par liaison CAN
@@ -29,6 +29,21 @@ enum class ExccAspect : uint8_t
     ASPECT_VOIE_LIBRE,
     ASPECT_MANOEUVRE,
     ASPECT_MASQUE,
+};
+
+/* ============================================================
+ *  🟦 ENUM TYPE DE MATS
+ * ============================================================
+ */
+enum SignalProfil : uint8_t
+{
+    SIG_ABSENT = 0, // Aucun signal présent physiquement
+
+    SIG_BAL = 1,       // 3 feux : Rouge / Jaune / Vert (BAL)
+    SIG_CARRE = 2,     // 5 feux : Carré + Œilleton
+    SIG_RAL = 3,       // 7 feux : Ralentissement 30/60
+    SIG_RAPPEL = 4,    // 9 feux : Rappel 30/60
+    SIG_MANOEUVRE = 5, // 2 feux : Blanc + Violet
 };
 
 /* ============================================================================
@@ -64,6 +79,8 @@ enum class Cmd_CC_to_EXCC : uint16_t
     DIRECTION_ANTIHORAIRE = 0xFA,
     OCCUPATION_VOISINS = 0xFB,
     PING = 0xFC,
+    CANTON_ID = 0xFD,
+    PROFILE_VOIE = 0xFE,
 };
 
 /* ============================================================================

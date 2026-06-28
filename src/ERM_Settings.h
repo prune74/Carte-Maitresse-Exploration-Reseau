@@ -36,7 +36,7 @@ public:
     // --- Paramètres persistants ---
     static bool WIFI_ON;        // Activation WiFi
     static bool EXPLORATION_ON; // Activation du mode Exploration
-    static uint16_t idNode;     // Identifiant maître (1..253)
+    static uint16_t idCanton;   // Identifiant maître (1..253)
 
     static String WIFI_SSID; // SSID WiFi
     static String WIFI_PSW;  // Mot de passe WiFi

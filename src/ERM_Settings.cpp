@@ -25,7 +25,7 @@
 // ---------------------------------------------------------------------------
 bool ERM_Settings::WIFI_ON = true;
 bool ERM_Settings::EXPLORATION_ON = true;
-uint16_t ERM_Settings::idNode = NO_ID;
+uint16_t ERM_Settings::idCanton = NO_ID;
 
 String ERM_Settings::WIFI_SSID = "";
 String ERM_Settings::WIFI_PSW = "";
@@ -72,7 +72,7 @@ void ERM_Settings::readFile()
     }
 
     // Lecture sécurisée des paramètres
-    idNode = doc["idNode"] | NO_ID;
+    idCanton = doc["idCanton"] | NO_ID;
     EXPLORATION_ON = doc["exploration_on"] | true;
     WIFI_ON = doc["wifi_on"] | true;
 
@@ -83,7 +83,7 @@ void ERM_Settings::readFile()
     MODE_TEST = doc["mode_test"] | true;
 
     LOG_INFO("Configuration chargée :");
-    LOG_INFO(" - idNode         = %u", idNode);
+    LOG_INFO(" - idCanton         = %u", idCanton);
     LOG_INFO(" - exploration_on = %s", EXPLORATION_ON ? "true" : "false");
     LOG_INFO(" - wifi_on        = %s", WIFI_ON ? "true" : "false");
     LOG_INFO(" - wifi_ssid      = %s", WIFI_SSID.c_str());
@@ -101,7 +101,7 @@ void ERM_Settings::writeFile()
 {
     StaticJsonDocument<512> doc;
 
-    doc["idNode"] = idNode;
+    doc["idCanton"] = idCanton;
     doc["exploration_on"] = EXPLORATION_ON;
     doc["wifi_on"] = WIFI_ON;
     doc["wifi_ssid"] = WIFI_SSID;
