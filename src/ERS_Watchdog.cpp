@@ -1,6 +1,6 @@
 #include "ERS_Watchdog.h"
 #include "Pins.h"
-#include "Protocol.h"
+#include <Protocol.h>
 #include "Variables.h"
 #include "ERM_CC_Manager.h"
 #include "ERM_CanService.h"
@@ -83,7 +83,7 @@ void ERS_triggerCcOffline(uint16_t offlineId)
         2,
         static_cast<uint16_t>(Cmd_ERM_to_CC::OFFLINE),
         false,
-        idMain,
+        ERM_ID,
         {data[0], data[1]});
 
     canService.sendMessage(msg);

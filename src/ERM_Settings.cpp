@@ -61,7 +61,8 @@ void ERM_Settings::readFile()
         return;
     }
 
-    StaticJsonDocument<768> doc;
+    JsonDocument doc;
+
     DeserializationError error = deserializeJson(doc, file);
 
     if (error)
@@ -71,25 +72,23 @@ void ERM_Settings::readFile()
         return;
     }
 
-    // Lecture sécurisée des paramètres
-    idCanton = doc["idCanton"] | NO_ID;
-    EXPLORATION_ON = doc["exploration_on"] | true;
-    WIFI_ON = doc["wifi_on"] | true;
+    idCanton        = doc["idCanton"]        | NO_ID;
+    EXPLORATION_ON  = doc["exploration_on"]  | true;
+    WIFI_ON         = doc["wifi_on"]         | true;
 
-    WIFI_SSID = doc["wifi_ssid"] | "";
-    WIFI_PSW = doc["wifi_psw"] | "";
+    WIFI_SSID       = doc["wifi_ssid"]       | "";
+    WIFI_PSW        = doc["wifi_psw"]        | "";
 
-    track_profile = doc["track_profile"] | 0;
-    MODE_TEST = doc["mode_test"] | true;
+    track_profile   = doc["track_profile"]   | 0;
+    MODE_TEST       = doc["mode_test"]       | true;
 
     LOG_INFO("Configuration chargée :");
     LOG_INFO(" - idCanton         = %u", idCanton);
-    LOG_INFO(" - exploration_on = %s", EXPLORATION_ON ? "true" : "false");
-    LOG_INFO(" - wifi_on        = %s", WIFI_ON ? "true" : "false");
-    LOG_INFO(" - wifi_ssid      = %s", WIFI_SSID.c_str());
-    LOG_INFO(" - track_profile  = %s",
-             track_profile == 0 ? "N (12V)" : "HO (15V)");
-    LOG_INFO(" - mode_test      = %s", MODE_TEST ? "true" : "false");
+    LOG_INFO(" - exploration_on   = %s", EXPLORATION_ON ? "true" : "false");
+    LOG_INFO(" - wifi_on          = %s", WIFI_ON ? "true" : "false");
+    LOG_INFO(" - wifi_ssid        = %s", WIFI_SSID.c_str());
+    LOG_INFO(" - track_profile    = %s", track_profile == 0 ? "N (12V)" : "HO (15V)");
+    LOG_INFO(" - mode_test        = %s", MODE_TEST ? "true" : "false");
 
     file.close();
 }
@@ -99,15 +98,15 @@ void ERM_Settings::readFile()
 // ---------------------------------------------------------------------------
 void ERM_Settings::writeFile()
 {
-    StaticJsonDocument<512> doc;
+    JsonDocument doc;
 
-    doc["idCanton"] = idCanton;
+    doc["idCanton"]       = idCanton;
     doc["exploration_on"] = EXPLORATION_ON;
-    doc["wifi_on"] = WIFI_ON;
-    doc["wifi_ssid"] = WIFI_SSID;
-    doc["wifi_psw"] = WIFI_PSW;
-    doc["track_profile"] = track_profile;
-    doc["mode_test"] = MODE_TEST;
+    doc["wifi_on"]        = WIFI_ON;
+    doc["wifi_ssid"]      = WIFI_SSID;
+    doc["wifi_psw"]       = WIFI_PSW;
+    doc["track_profile"]  = track_profile;
+    doc["mode_test"]      = MODE_TEST;
 
     File file = SPIFFS.open("/settings.json", "w");
     if (!file)
@@ -121,7 +120,6 @@ void ERM_Settings::writeFile()
 
     LOG_INFO("settings.json mis à jour");
 }
-
 // ---------------------------------------------------------------------------
 // GETTERS
 // ---------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 #include "ERM_CC_Manager.h"
-#include "Protocol.h"
+#include <Protocol.h>
 #include "Debug.h"
 
 /*
- * ExplorationReseau_Maitre_SatManager.cpp
+ * ExplorationReseau_Maitre_CCManager.cpp
  *
  * 🎯 Rôle
  * Gestionnaire central des Canton Controller du réseau d’exploration (ERM).

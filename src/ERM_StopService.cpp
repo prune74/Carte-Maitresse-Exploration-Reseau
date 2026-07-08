@@ -5,7 +5,7 @@
 #include "ERM_StopService.h"
 #include "Pins.h"
 #include "ERM_CanService.h"
-#include "Protocol.h"
+#include <Protocol.h>
 #include "Debug.h"
 
 extern ERM_CanService canService;

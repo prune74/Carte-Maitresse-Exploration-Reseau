@@ -9,7 +9,7 @@
 #include "ERM_StopService.h"
 #include "Variables.h"
 #include "ProtocolCAN.h"
-#include "Protocol.h"
+#include <Protocol.h>
 #include "CanBus.h"
 #include "Debug.h"
 
@@ -236,7 +236,7 @@ void ERM_CanService::sendWifiOnOff(bool on)
         2,
         static_cast<uint16_t>(Cmd_ERM_to_CC::WIFI_ON_OFF),
         false,
-        idMain,
+        ERM_ID,
         {uint8_t(on ? 1 : 0)});
 
     ERM_sendFrame(msg);
@@ -250,7 +250,7 @@ void ERM_CanService::sendExplorationOnOff(bool on)
         2,
         static_cast<uint16_t>(Cmd_ERM_to_CC::EXPLORATION_ON_OFF),
         false,
-        idMain,
+        ERM_ID,
         {uint8_t(on ? 1 : 0)});
 
     ERM_sendFrame(msg);
@@ -264,7 +264,7 @@ void ERM_CanService::sendSaveAll()
         2,
         static_cast<uint16_t>(Cmd_ERM_to_CC::SAVE_ALL),
         false,
-        idMain,
+        ERM_ID,
         {});
 
     ERM_sendFrame(msg);
@@ -278,7 +278,7 @@ void ERM_CanService::sendRestartAll()
         2,
         static_cast<uint16_t>(Cmd_ERM_to_CC::RESTART_ALL),
         false,
-        idMain,
+        ERM_ID,
         {});
 
     ERM_sendFrame(msg);
@@ -292,7 +292,7 @@ void ERM_CanService::sendTrackProfile(uint8_t profile)
         2,
         static_cast<uint16_t>(Cmd_ERM_to_CC::SET_PROFILE),
         false,
-        idMain,
+        ERM_ID,
         {uint8_t(profile)});
 
     ERM_sendFrame(msg);

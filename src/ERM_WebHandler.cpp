@@ -79,7 +79,7 @@ void ERM_WebHandler::loop()
  * ------------------------------------------------------------------------- */
 void ERM_WebHandler::pushStatus()
 {
-    StaticJsonDocument<2048> doc;
+    JsonDocument doc;
 
     // --- État global ---
     doc["wifi_on"] = ERM_Settings::WIFI_ON;
@@ -97,14 +97,14 @@ void ERM_WebHandler::pushStatus()
     doc["can_last_ms"] = canService.lastRxAgeMs();
 
     // --- Liste des Canton Controllers ---
-    JsonArray ccsJson = doc.createNestedArray("ccs");
+    JsonArray ccsJson = doc["ccs"].to<JsonArray>();
 
     for (const auto *it = CC_Manager.ccBegin(); it != CC_Manager.ccEnd(); ++it)
     {
         const auto &s = *it;
         if (s.id != NO_ID)
         {
-            JsonObject o = ccsJson.createNestedObject();
+            JsonObject o = ccsJson.add<JsonObject>();
             o["id"] = s.id;
             o["online"] = s.online;
             o["lastSeen"] = s.lastSeen;
@@ -122,7 +122,8 @@ void ERM_WebHandler::pushStatus()
  * ------------------------------------------------------------------------- */
 void ERM_WebHandler::pushLog(const char *type, const char *msg)
 {
-    StaticJsonDocument<256> doc;
+    JsonDocument doc;
+
     doc["log"]["type"] = type;
     doc["log"]["msg"] = msg;
 
@@ -136,7 +137,7 @@ void ERM_WebHandler::pushLog(const char *type, const char *msg)
  * ------------------------------------------------------------------------- */
 void ERM_WebHandler::pushCanFrame(const CanMsg &msg, const char *type)
 {
-    StaticJsonDocument<256> doc;
+    JsonDocument doc;
 
     doc["can_frame"]["type"] = type;
     doc["can_frame"]["time"] = millis();
@@ -181,7 +182,8 @@ void ERM_WebHandler::ERM_wsEvent(AsyncWebSocket *server,
 
     case WS_EVT_DATA:
     {
-        StaticJsonDocument<512> doc;
+        JsonDocument doc;
+
         if (deserializeJson(doc, data))
         {
             LOG_WARN("WebSocket → erreur JSON");

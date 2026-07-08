@@ -1,5 +1,5 @@
 #include "ProtocolCAN.h"
-#include "Protocol.h"
+#include <Protocol.h>
 #include "CanID.h"
 #include "Debug.h"
 
@@ -22,9 +22,9 @@ ProtocolCANFields ProtocolCAN::decode(uint32_t id)
     ProtocolCANFields f;
 
     f.prio = CanID::prio(id);
-    f.cmd  = CanID::cmde(id);
+    f.cmd = CanID::cmde(id);
     f.resp = CanID::resp(id);
-    f.src  = CanID::nodeId(id);
+    f.src = CanID::nodeId(id);
 
     LOG_VERBOSE("ProtocolCAN → decode(0x%08X) → prio=%u cmd=0x%X resp=%u src=%u",
                 id, f.prio, f.cmd, f.resp, f.src);
