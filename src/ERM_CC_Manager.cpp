@@ -1,4 +1,5 @@
 #include "ERM_CC_Manager.h"
+#include "Protocol.h"
 #include "Debug.h"
 
 /*
@@ -23,7 +24,18 @@
 ERM_CC_Manager::ERM_CC_Manager()
 {
     for (uint8_t i = 0; i < NB_CC; i++)
+    {
         _cantonController[i].id = NO_ID;
+        _cantonController[i].online = false;
+        _cantonController[i].lastSeen = 0;
+    }
+
+    // Réservation de CLF_ID pour la carte CLF — Centrale de Logique Ferroviaire
+    _cantonController[0].id = CLF_ID;
+    _cantonController[0].online = false;
+    _cantonController[0].lastSeen = 0;
+
+    LOG_INFO("CC %u → réservé pour carte CLF — Centrale de Logique Ferroviaire ", CLF_ID);
 }
 
 // ---------------------------------------------------------------------------
